@@ -6,7 +6,7 @@
   "description": "Portal web administrativo y para medicos - MediControl",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview --port 4173",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
