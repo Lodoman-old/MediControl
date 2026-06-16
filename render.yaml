@@ -1,10 +1,3 @@
-databases:
-  - name: medicontrol-db
-    plan: free
-    databaseName: medicontrol
-    user: medicontrol
-    ipAllowList: []
-
 services:
   - type: web
     name: medicontrol-api
@@ -17,9 +10,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: medicontrol-db
-          property: connectionString
+        sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
