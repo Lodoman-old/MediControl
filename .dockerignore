@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+dist/
+.git/
+.env
+.env.*
+*.log
+.turbo/
+.gitignore
+README.md
+apps/mobile/
+apps/web/
