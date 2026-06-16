@@ -49,7 +49,7 @@ export default function SchedulePage() {
       const docs = items.map((u: any) => ({ id: u.id, fullName: u.fullName }));
       setDoctors(docs);
       if (!currentUser?.roles.includes("DOCTOR") && !selectedDoctor && docs.length === 1) {
-        setSelectedDoctor(docs[0].id);
+        setSelectedDoctor(docs[0]?.id);
       }
     }).catch(() => {});
   }, []);
@@ -67,7 +67,7 @@ export default function SchedulePage() {
   const schedByDay: ScheduleMap = {};
   for (const s of schedules) {
     if (!schedByDay[s.dayOfWeek]) schedByDay[s.dayOfWeek] = [];
-    schedByDay[s.dayOfWeek].push(s);
+    schedByDay[s.dayOfWeek]!.push(s);
   }
 
   const openAdd = (day: number) => {
