@@ -3,6 +3,7 @@ RUN npm install -g pnpm@9.12.0
 WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY tsconfig.base.json ./
 COPY apps/api/ apps/api/
 
 RUN pnpm install --frozen-lockfile --filter @medicontrol/api
