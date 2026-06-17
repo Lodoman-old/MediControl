@@ -182,17 +182,12 @@ export class PrescriptionsService {
       doc.fontSize(14).font("Helvetica-Bold").fillColor("#222");
       doc.text(specialtyName.toUpperCase() || "MEDICINA GENERAL", { align: "center" });
 
-      doc.moveDown(0.25);
-      doc.fontSize(11).font("Helvetica").fillColor("#444");
-      doc.text(`CÉDULA PROFESIONAL: ${cedulaProfesional || "N/A"}`, { align: "center" });
-
-      doc.moveDown(0.2);
-      doc.fontSize(10).font("Helvetica").fillColor("#555");
-      doc.text(`CÉDULA ESPECIALIDAD: ${cedulaEspecialidad || "N/A"}`, { align: "center" });
-
-      doc.moveDown(0.2);
-      doc.fontSize(9).font("Helvetica").fillColor("#666");
-      doc.text(`REGISTRO SSG: ${orgName || "N/A"}`, { align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica").fillColor("#444");
+      doc.text(
+        `CÉDULA PROFESIONAL: ${cedulaProfesional || "N/A"}    CÉDULA ESPECIALIDAD: ${cedulaEspecialidad || "N/A"}    SSG: ${orgName || "N/A"}`,
+        { align: "center" },
+      );
 
       doc.moveDown(0.2);
       doc.fontSize(8.5).font("Helvetica").fillColor("#777");
