@@ -44,11 +44,23 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        clear();
+        setCheckingSession(false);
+      }
+    }, 5000);
+
     if (!isAuthed) {
+      clearTimeout(timeout);
       setCheckingSession(false);
       return;
     }
+
     api.get("/auth/me").then(() => {
+      if (cancelled) return;
+      clearTimeout(timeout);
       setCheckingSession(false);
       if (user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
@@ -57,9 +69,13 @@ export default function LoginPage() {
         navigate(from, { replace: true });
       }
     }).catch(() => {
+      if (cancelled) return;
+      clearTimeout(timeout);
       clear();
       setCheckingSession(false);
     });
+
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   const onSubmit = handleSubmit(async (data) => {
