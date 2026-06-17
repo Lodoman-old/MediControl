@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
 
@@ -96,6 +96,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "treatments", label: "Tratamientos" },
   { key: "consents", label: "Consentimientos" },
   { key: "lab", label: "Estudios" },
+  { key: "prescriptions", label: "Recetas" },
 ];
 
 const NOTE_STATUS = { ACTIVE: "Activo", RESOLVED: "Resuelto", SUSPECTED: "Sospechado" } as Record<string, string>;
@@ -155,8 +156,6 @@ export default function ExpedientePage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [prescMenuOpen, setPrescMenuOpen] = useState(false);
-  const prescMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!patientId) return;
@@ -174,16 +173,6 @@ export default function ExpedientePage() {
       .catch((err) => setError(extractErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [patientId]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (prescMenuRef.current && !prescMenuRef.current.contains(e.target as Node)) {
-        setPrescMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   const formatDate = (iso: string) => {
     try { return new Date(iso).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -320,37 +309,12 @@ export default function ExpedientePage() {
             </button>
           )}
           {activeTab === "prescriptions" && (
-            <div className="relative" ref={prescMenuRef}>
-              <button
-                type="button"
-                onClick={() => setPrescMenuOpen((o) => !o)}
-                className="text-sm font-medium text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
-              >
-                Recetas ▾
-              </button>
-              {prescMenuOpen && (
-                <div className="absolute top-full right-0 mt-1 bg-white border border-ink-200 rounded-lg shadow-lg py-1 min-w-44 z-50">
-                  <button
-                    onClick={() => { setPrescMenuOpen(false); setActiveTab("prescriptions"); }}
-                    className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
-                  >
-                    Recetas
-                  </button>
-                  <button
-                    onClick={() => { setPrescMenuOpen(false); downloadAllPrescriptionsPdf(patientId); }}
-                    className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
-                  >
-                    Receta completa
-                  </button>
-                  <button
-                    onClick={() => { setPrescMenuOpen(false); navigate(`/expediente/${patientId}/prescriptions/new`); }}
-                    className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
-                  >
-                    Receta nueva
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/prescriptions/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Nueva receta
+            </button>
           )}
         </div>
       </div>
@@ -605,6 +569,16 @@ export default function ExpedientePage() {
 
       {activeTab === "prescriptions" && (
         <div className="space-y-4">
+          {prescriptions.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => downloadAllPrescriptionsPdf(patientId)}
+                className="btn-secondary text-sm"
+              >
+                Receta completa PDF
+              </button>
+            </div>
+          )}
           {prescriptions.length === 0 ? (
             <div className="card text-center py-8">
               <p className="text-ink-500 text-sm">No hay recetas registradas</p>
