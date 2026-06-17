@@ -150,9 +150,13 @@ export default function AppLayout({ children }: Props) {
       )}
 
       {(isAdmin || isDoctor || isCajero) && (
-        <Link to="/farmacia" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
-          Farmacia
-        </Link>
+        <Dropdown label="Farmacia">
+          <NavLink to="/farmacia">POS / Vender</NavLink>
+          <NavLink to="/farmacia/ventas">Historial</NavLink>
+          <NavLink to="/farmacia/reporte-ventas">Reporte</NavLink>
+          <NavLink to="/farmacia/ajustes">Ajustar stock</NavLink>
+          <NavLink to="/farmacia/caja">Corte de caja</NavLink>
+        </Dropdown>
       )}
 
       {isAdmin && (
@@ -201,7 +205,14 @@ export default function AppLayout({ children }: Props) {
       )}
 
       {(isAdmin || isDoctor || isCajero) && (
-        <MobileNavLink to="/farmacia">Farmacia</MobileNavLink>
+        <>
+          <div className="px-4 py-2 text-xs font-semibold text-ink-400 uppercase tracking-wider bg-ink-50/50">Farmacia</div>
+          <MobileNavLink to="/farmacia">POS / Vender</MobileNavLink>
+          <MobileNavLink to="/farmacia/ventas">Historial</MobileNavLink>
+          <MobileNavLink to="/farmacia/reporte-ventas">Reporte</MobileNavLink>
+          <MobileNavLink to="/farmacia/ajustes">Ajustar stock</MobileNavLink>
+          <MobileNavLink to="/farmacia/caja">Corte de caja</MobileNavLink>
+        </>
       )}
 
       {isAdmin && (
