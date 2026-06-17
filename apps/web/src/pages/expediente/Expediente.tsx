@@ -249,10 +249,9 @@ export default function ExpedientePage() {
         </Link>
       </div>
 
-      <div className="flex border-b border-ink-100 -mx-4 sm:mx-0 px-4 sm:px-0">
-        <div className="overflow-x-auto flex-1 min-w-0">
-          <div className="flex gap-1 min-w-max">
-            {TABS.map((t) => (
+      <div className="flex flex-wrap items-center border-b border-ink-100 -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="flex gap-1 flex-wrap min-w-0 max-w-full pb-px">
+          {TABS.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
@@ -265,9 +264,7 @@ export default function ExpedientePage() {
                 {t.label}
               </button>
             ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0 pl-2">
+          <div className="flex items-center gap-1 shrink-0 pl-2">
           {activeTab === "notes" && (
             <button
               onClick={() => navigate(`/expediente/${patientId}/notes/new`)}
@@ -318,8 +315,9 @@ export default function ExpedientePage() {
           )}
         </div>
       </div>
+    </div>
 
-      {activeTab === "notes" && (
+    {activeTab === "notes" && (
         <div className="space-y-4">
           {notes.length === 0 ? (
             <div className="card text-center py-8">
