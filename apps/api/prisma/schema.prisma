@@ -679,11 +679,11 @@ model MedicalRecord {
   id                       String    @id @default(uuid()) @db.Uuid
   organizationId           String    @map("organization_id") @db.Uuid
   patientId                String    @unique @map("patient_id") @db.Uuid
-  familyHistory            Json?     @map("family_history") @db.JsonB
-  nonPathologicalHistory   Json?     @map("non_pathological_history") @db.JsonB
-  pathologicalHistory      Json?     @map("pathological_history") @db.JsonB
+  familyHistory            String?   @map("family_history") @db.Text
+  nonPathologicalHistory   String?   @map("non_pathological_history") @db.Text
+  pathologicalHistory      String?   @map("pathological_history") @db.Text
   currentIllness           String?   @map("current_illness") @db.Text
-  systemsReview            Json?     @map("systems_review") @db.JsonB
+  systemsReview            String?   @map("systems_review") @db.Text
   createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

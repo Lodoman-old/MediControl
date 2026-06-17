@@ -324,15 +324,18 @@ export class CreateLabResultDto {
 export class UpdateMedicalHistoryDto {
   @ApiPropertyOptional()
   @IsOptional()
-  familyHistory?: any;
+  @IsString()
+  familyHistory?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  nonPathologicalHistory?: any;
+  @IsString()
+  nonPathologicalHistory?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  pathologicalHistory?: any;
+  @IsString()
+  pathologicalHistory?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -341,5 +344,6 @@ export class UpdateMedicalHistoryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  systemsReview?: any;
+  @IsString()
+  systemsReview?: string;
 }

@@ -21,11 +21,11 @@ export default function MedicalHistoryPage() {
     api.get(`/clinical-records/${patientId}`)
       .then(({ data }) => {
         setForm({
-          familyHistory: data.familyHistory ? JSON.stringify(data.familyHistory, null, 2) : "",
-          nonPathologicalHistory: data.nonPathologicalHistory ? JSON.stringify(data.nonPathologicalHistory, null, 2) : "",
-          pathologicalHistory: data.pathologicalHistory ? JSON.stringify(data.pathologicalHistory, null, 2) : "",
+          familyHistory: data.familyHistory ?? "",
+          nonPathologicalHistory: data.nonPathologicalHistory ?? "",
+          pathologicalHistory: data.pathologicalHistory ?? "",
           currentIllness: data.currentIllness ?? "",
-          systemsReview: data.systemsReview ? JSON.stringify(data.systemsReview, null, 2) : "",
+          systemsReview: data.systemsReview ?? "",
         });
       })
       .catch((err) => setError(extractErrorMessage(err)))
@@ -39,11 +39,11 @@ export default function MedicalHistoryPage() {
     setError(null);
     try {
       const body: Record<string, unknown> = {};
-      if (form.familyHistory) body.familyHistory = JSON.parse(form.familyHistory);
-      if (form.nonPathologicalHistory) body.nonPathologicalHistory = JSON.parse(form.nonPathologicalHistory);
-      if (form.pathologicalHistory) body.pathologicalHistory = JSON.parse(form.pathologicalHistory);
+      if (form.familyHistory) body.familyHistory = form.familyHistory;
+      if (form.nonPathologicalHistory) body.nonPathologicalHistory = form.nonPathologicalHistory;
+      if (form.pathologicalHistory) body.pathologicalHistory = form.pathologicalHistory;
       if (form.currentIllness) body.currentIllness = form.currentIllness;
-      if (form.systemsReview) body.systemsReview = JSON.parse(form.systemsReview);
+      if (form.systemsReview) body.systemsReview = form.systemsReview;
       await api.patch(`/clinical-records/${patientId}/history`, body);
       navigate(`/expediente/${patientId}`);
     } catch (err) {
@@ -81,8 +81,8 @@ export default function MedicalHistoryPage() {
           <div>
             <label className="label">Antecedentes heredofamiliares</label>
             <textarea
-              className="input h-24 font-mono text-sm"
-              placeholder='{"diabetes": "Madre", "hipertension": "Padre"}'
+              className="input h-24"
+              placeholder="Ej: Diabetes: Madre, Hipertension: Padre"
               value={form.familyHistory}
               onChange={(e) => setForm({ ...form, familyHistory: e.target.value })}
             />
@@ -90,8 +90,8 @@ export default function MedicalHistoryPage() {
           <div>
             <label className="label">Antecedentes no patologicos</label>
             <textarea
-              className="input h-24 font-mono text-sm"
-              placeholder='{"tabaquismo": "Negado", "alcoholismo": "Negado"}'
+              className="input h-24"
+              placeholder="Ej: Tabaquismo: Negado, Alcoholismo: Negado"
               value={form.nonPathologicalHistory}
               onChange={(e) => setForm({ ...form, nonPathologicalHistory: e.target.value })}
             />
@@ -99,8 +99,8 @@ export default function MedicalHistoryPage() {
           <div>
             <label className="label">Antecedentes patologicos</label>
             <textarea
-              className="input h-24 font-mono text-sm"
-              placeholder='{"cirugias": ["Apendicectomia 2010"], "cronicos": ["Asma"]}'
+              className="input h-24"
+              placeholder="Ej: Cirugias: Apendicectomia 2010, Enfermedades cronicas: Asma"
               value={form.pathologicalHistory}
               onChange={(e) => setForm({ ...form, pathologicalHistory: e.target.value })}
             />
@@ -117,8 +117,8 @@ export default function MedicalHistoryPage() {
           <div>
             <label className="label">Revision por sistemas</label>
             <textarea
-              className="input h-24 font-mono text-sm"
-              placeholder='{"neurologico": "Sin alteraciones", "cardiovascular": "Normal"}'
+              className="input h-24"
+              placeholder="Ej: Neurologico: Sin alteraciones, Cardiovascular: Normal"
               value={form.systemsReview}
               onChange={(e) => setForm({ ...form, systemsReview: e.target.value })}
             />
