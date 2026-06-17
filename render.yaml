@@ -4,6 +4,7 @@ services:
     runtime: image
     plan: free
     repo: https://github.com/Lodoman-old/MediControl
+    branch: master
     dockerContext: .
     dockerfilePath: ./apps/api/Dockerfile
     envVars:
@@ -38,7 +39,8 @@ services:
     name: medicontrol-web
     plan: free
     repo: https://github.com/Lodoman-old/MediControl
-    buildCommand: npm install -g pnpm@9.12.0 && pnpm install --frozen-lockfile --filter @medicontrol/web && pnpm --filter @medicontrol/web build
+    branch: master
+    buildCommand: npm install -g pnpm@9.12.0 && pnpm --filter @medicontrol/web install --frozen-lockfile && pnpm --filter @medicontrol/web build
     staticPublishPath: ./apps/web/dist
     headers:
       - path: /*
