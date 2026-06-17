@@ -96,7 +96,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "treatments", label: "Tratamientos" },
   { key: "consents", label: "Consentimientos" },
   { key: "lab", label: "Estudios" },
-  { key: "prescriptions", label: "Recetas" },
 ];
 
 const NOTE_STATUS = { ACTIVE: "Activo", RESOLVED: "Resuelto", SUSPECTED: "Sospechado" } as Record<string, string>;
@@ -261,22 +260,25 @@ export default function ExpedientePage() {
         </Link>
       </div>
 
-      <div className="overflow-x-auto -mx-4 sm:mx-0">
-        <div className="flex gap-1 border-b border-ink-100 min-w-max px-4 sm:px-0">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`px-3 sm:px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === t.key
-                  ? "border-primary-600 text-primary-700"
-                  : "border-transparent text-ink-500 hover:text-ink-700"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-          <div className="flex-1 min-w-4" />
+      <div className="flex border-b border-ink-100 -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="overflow-x-auto flex-1 min-w-0">
+          <div className="flex gap-1 min-w-max">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={`px-3 sm:px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === t.key
+                    ? "border-primary-600 text-primary-700"
+                    : "border-transparent text-ink-500 hover:text-ink-700"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 pl-2">
           {activeTab === "notes" && (
             <button
               onClick={() => navigate(`/expediente/${patientId}/notes/new`)}
@@ -322,23 +324,29 @@ export default function ExpedientePage() {
               <button
                 type="button"
                 onClick={() => setPrescMenuOpen((o) => !o)}
-                className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+                className="text-sm font-medium text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
               >
                 Recetas ▾
               </button>
               {prescMenuOpen && (
                 <div className="absolute top-full right-0 mt-1 bg-white border border-ink-200 rounded-lg shadow-lg py-1 min-w-44 z-50">
                   <button
-                    onClick={() => { setPrescMenuOpen(false); navigate(`/expediente/${patientId}/prescriptions/new`); }}
+                    onClick={() => { setPrescMenuOpen(false); setActiveTab("prescriptions"); }}
                     className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
                   >
-                    + Nueva receta
+                    Recetas
                   </button>
                   <button
                     onClick={() => { setPrescMenuOpen(false); downloadAllPrescriptionsPdf(patientId); }}
                     className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
                   >
-                    Receta completa PDF
+                    Receta completa
+                  </button>
+                  <button
+                    onClick={() => { setPrescMenuOpen(false); navigate(`/expediente/${patientId}/prescriptions/new`); }}
+                    className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
+                  >
+                    Receta nueva
                   </button>
                 </div>
               )}
