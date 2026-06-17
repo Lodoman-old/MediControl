@@ -28,7 +28,7 @@ export default function SalesHistoryPage() {
         <button onClick={() => navigate("/farmacia")} className="text-sm text-ink-500 hover:text-ink-700">Volver a farmacia</button>
       </div>
 
-      <div className="card p-0 overflow-hidden">
+      <div className="card p-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="bg-ink-50 text-ink-600 text-left">
             <th className="px-4 py-3 font-medium">Fecha</th><th className="px-4 py-3 font-medium">Cliente</th>

@@ -47,6 +47,7 @@ export default function AppLayout({ children }: Props) {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   const handleLogout = async () => {
     setMobileMenuOpen(false);
@@ -66,6 +67,12 @@ export default function AppLayout({ children }: Props) {
     }
     return () => { document.body.style.overflow = ""; };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const displayName = user?.fullName ?? "Cargando...";
   const initials =
@@ -219,46 +226,50 @@ export default function AppLayout({ children }: Props) {
             <Logo variant="horizontal" className="h-7 sm:h-9" />
           </Link>
 
-          <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-            <div className="text-right mr-1">
-              <p className="text-sm text-ink-900 font-medium leading-tight">{displayName}</p>
-              <p className="text-xs text-ink-500">{user ? roleLabels(user.roles) : "..."}</p>
+          {!isMobile && (
+            <div className="flex items-center gap-2 xl:gap-3">
+              <div className="text-right mr-1">
+                <p className="text-sm text-ink-900 font-medium leading-tight">{displayName}</p>
+                <p className="text-xs text-ink-500">{user ? roleLabels(user.roles) : "..."}</p>
+              </div>
+              <div className="h-9 w-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold shrink-0">
+                {initials}
+              </div>
+              <div className="flex items-center gap-2 xl:gap-3 text-sm ml-2">
+                {navItems}
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-sm text-ink-600 hover:text-ink-900 whitespace-nowrap ml-2"
+              >
+                Salir
+              </button>
             </div>
-            <div className="h-9 w-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold shrink-0">
-              {initials}
-            </div>
-            <div className="flex items-center gap-2 xl:gap-3 text-sm ml-2">
-              {navItems}
-            </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-sm text-ink-600 hover:text-ink-900 whitespace-nowrap ml-2"
-            >
-              Salir
-            </button>
-          </div>
+          )}
 
-          <div className="flex lg:hidden items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-xs shrink-0">
-              {initials}
+          {isMobile && (
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-xs shrink-0">
+                {initials}
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 -mr-2 text-ink-600 hover:text-ink-900"
+                aria-label="Abrir menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-2 -mr-2 text-ink-600 hover:text-ink-900"
-              aria-label="Abrir menu"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
+          )}
         </div>
       </header>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileMenuOpen(false)}

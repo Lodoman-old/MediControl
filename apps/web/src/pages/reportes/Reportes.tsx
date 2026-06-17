@@ -80,7 +80,7 @@ export default function ReportesPage() {
             <div className="card"><p className="text-sm text-ink-500">Promedio por cita</p><p className="text-3xl font-bold text-ink-900">{rev.data?.count ? currency(rev.data.total / rev.data.count) : "—"}</p></div>
           </div>
           {rev.data?.groups && Object.keys(rev.data.groups).length > 0 && (
-            <div className="card">
+            <div className="card overflow-x-auto">
               <h3 className="font-semibold text-ink-900 mb-3">Por {rev.data.groupBy === "doctor" ? "medico" : "servicio"}</h3>
               <table className="w-full text-sm">
                 <thead><tr className="text-ink-500 text-left"><th className="pb-2 font-medium">Nombre</th><th className="pb-2 font-medium">Citas</th><th className="pb-2 font-medium text-right">Total</th></tr></thead>
@@ -97,7 +97,7 @@ export default function ReportesPage() {
         <div className="space-y-4">
           <div className="card"><p className="text-sm text-ink-500">Total de citas</p><p className="text-3xl font-bold text-ink-900">{apps.data?.total ?? "—"}</p></div>
           {apps.data?.byStatus && (
-            <div className="card p-0 overflow-hidden">
+            <div className="card p-0 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="bg-ink-50 text-ink-600 text-left"><th className="px-4 py-3 font-medium">Estado</th><th className="px-4 py-3 font-medium text-right">Cantidad</th></tr></thead>
                 <tbody>{Object.entries(apps.data.byStatus).map(([status, count]) => (
@@ -119,7 +119,7 @@ export default function ReportesPage() {
       )}
 
       {tab === "doctors" && (
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
               <th className="px-4 py-3 font-medium">Medico</th><th className="px-4 py-3 font-medium">Especialidad</th>

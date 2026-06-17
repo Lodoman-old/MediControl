@@ -163,7 +163,7 @@ export default function CashRegisterPage() {
               </div>
 
               {activeRegister.movements?.length > 0 && (
-                <div className="card">
+                <div className="card overflow-x-auto">
                   <h4 className="text-sm font-semibold text-ink-700 mb-2">Movimientos</h4>
                   <table className="w-full text-sm">
                     <thead><tr className="text-ink-500 text-left">
@@ -206,7 +206,7 @@ export default function CashRegisterPage() {
       )}
 
       {tab === "history" && (
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
               <th className="px-4 py-3 font-medium">Apertura</th>

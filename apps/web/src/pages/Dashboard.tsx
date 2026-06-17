@@ -88,7 +88,7 @@ export default function DashboardPage() {
           expediente.
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-4 sm:mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mt-4 sm:mt-8">
           <div className="card p-3 sm:p-6">
             <p className="text-xs sm:text-sm text-ink-500">Citas hoy</p>
             <p className="text-xl sm:text-3xl font-bold text-ink-900 mt-1">

@@ -95,7 +95,7 @@ export default function AgendaPage() {
       )}
 
       {data && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
           <div className="card p-3 sm:p-6">
             <p className="text-xs sm:text-sm text-ink-500">Total</p>
             <p className="text-xl sm:text-2xl font-bold text-ink-900">{data.total}</p>

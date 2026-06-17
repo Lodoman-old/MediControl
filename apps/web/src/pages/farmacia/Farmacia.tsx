@@ -145,7 +145,7 @@ export default function FarmaciaPage() {
       )}
 
       {tab === "meds" && (
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
               <th className="px-4 py-3 font-medium">Codigo barras</th><th className="px-4 py-3 font-medium">SKU</th><th className="px-4 py-3 font-medium">Nombre</th>
@@ -165,7 +165,7 @@ export default function FarmaciaPage() {
       )}
 
       {tab === "batches" && (
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
               <th className="px-4 py-3 font-medium">Medicamento</th><th className="px-4 py-3 font-medium">Lote</th>

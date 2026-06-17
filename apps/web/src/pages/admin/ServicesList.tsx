@@ -94,7 +94,7 @@ export default function ServicesListPage() {
         </form>
       </div>
 
-      <div className="card p-0 overflow-hidden">
+      <div className="card p-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-ink-50 text-ink-600 text-left">
