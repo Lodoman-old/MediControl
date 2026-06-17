@@ -79,48 +79,48 @@ export default function DashboardPage() {
   const stats = statsQuery.data;
 
   return (
-    <div className="space-y-6">
-        <h1 className="text-2xl font-semibold text-ink-900">
+    <div className="space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-ink-900">
           Bienvenido a MediControl
         </h1>
-        <p className="text-ink-500 mt-1">
+        <p className="text-sm sm:text-base text-ink-500 mt-1">
           Aqui veras tu agenda del dia, pagos por validar y accesos rapidos al
           expediente.
         </p>
 
-        <div className="grid md:grid-cols-4 gap-4 mt-8">
-          <div className="card">
-            <p className="text-sm text-ink-500">Citas hoy</p>
-            <p className="text-3xl font-bold text-ink-900 mt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-4 sm:mt-8">
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Citas hoy</p>
+            <p className="text-xl sm:text-3xl font-bold text-ink-900 mt-1">
               {stats?.appointmentsToday ?? "—"}
             </p>
             <p className="text-xs text-ink-400 mt-1">
               {stats?.completedToday ?? 0} completadas
             </p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Pagos por validar</p>
-            <p className="text-3xl font-bold text-warning-600 mt-1">
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Pagos por validar</p>
+            <p className="text-xl sm:text-3xl font-bold text-warning-600 mt-1">
               {stats?.pendingPayments ?? "—"}
             </p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Pacientes activos</p>
-            <p className="text-3xl font-bold text-primary-600 mt-1">
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Pacientes activos</p>
+            <p className="text-xl sm:text-3xl font-bold text-primary-600 mt-1">
               {stats?.totalPatients ?? "—"}
             </p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Ingresos hoy</p>
-            <p className="text-3xl font-bold text-success-600 mt-1">
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Ingresos hoy</p>
+            <p className="text-xl sm:text-3xl font-bold text-success-600 mt-1">
               {stats ? formatCurrency(stats.revenueToday) : "—"}
             </p>
           </div>
         </div>
 
         {stats && stats.upcomingAppointments.length > 0 && (
-          <div className="card mt-6">
-            <h2 className="text-lg font-semibold text-ink-900">
+          <div className="card p-4 sm:p-6 mt-4 sm:mt-6">
+            <h2 className="text-base sm:text-lg font-semibold text-ink-900">
               Proximas citas
             </h2>
             <div className="mt-3 overflow-x-auto">

@@ -65,10 +65,10 @@ export default function AgendaPage() {
   const canCreate = user?.roles.includes("ADMIN") || user?.roles.includes("RECEPTION") || user?.roles.includes("SUPERADMIN");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-semibold text-ink-900">Agenda del dia</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <h2 className="text-xl sm:text-2xl font-semibold text-ink-900">Agenda del dia</h2>
           <input
             type="date"
             value={date}
@@ -79,7 +79,7 @@ export default function AgendaPage() {
         {canCreate && (
           <button
             onClick={() => navigate("/appointments/new")}
-            className="btn-primary"
+            className="btn-primary text-sm w-full sm:w-auto"
           >
             Nueva cita
           </button>
@@ -95,31 +95,31 @@ export default function AgendaPage() {
       )}
 
       {data && (
-        <div className="grid grid-cols-5 gap-4">
-          <div className="card">
-            <p className="text-sm text-ink-500">Total</p>
-            <p className="text-2xl font-bold text-ink-900">{data.total}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Total</p>
+            <p className="text-xl sm:text-2xl font-bold text-ink-900">{data.total}</p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Pendientes</p>
-            <p className="text-2xl font-bold text-warning-600">{data.pending}</p>
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Pendientes</p>
+            <p className="text-xl sm:text-2xl font-bold text-warning-600">{data.pending}</p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Atendidas</p>
-            <p className="text-2xl font-bold text-success-600">{data.completed}</p>
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Atendidas</p>
+            <p className="text-xl sm:text-2xl font-bold text-success-600">{data.completed}</p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Canceladas</p>
-            <p className="text-2xl font-bold text-danger-600">{data.cancelled}</p>
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Canceladas</p>
+            <p className="text-xl sm:text-2xl font-bold text-danger-600">{data.cancelled}</p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Inasistencias</p>
-            <p className="text-2xl font-bold text-orange-600">{data.noShow}</p>
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Inasistencias</p>
+            <p className="text-xl sm:text-2xl font-bold text-orange-600">{data.noShow}</p>
           </div>
         </div>
       )}
 
-      <div className="card p-0 overflow-hidden">
+      <div className="card p-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-ink-50 text-ink-600 text-left">

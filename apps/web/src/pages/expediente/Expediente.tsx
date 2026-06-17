@@ -218,88 +218,90 @@ export default function ExpedientePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <Link to="/expediente" className="text-sm text-primary-600 hover:text-primary-800">
             &larr; Pacientes
           </Link>
-          <h2 className="text-2xl font-semibold text-ink-900 mt-1">{patient.fullName}</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold text-ink-900 mt-1">{patient.fullName}</h2>
           <p className="text-sm text-ink-500">
             Exp: {patient.mrn} &middot; {patient.bloodType ? `Sangre: ${patient.bloodType}` : ""}
           </p>
         </div>
         <Link
           to={`/expediente/${patientId}/history`}
-          className="btn-secondary text-sm"
+          className="btn-secondary text-sm w-full sm:w-auto text-center"
         >
           Historia medica
         </Link>
       </div>
 
-      <div className="flex gap-1 border-b border-ink-100">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
-              activeTab === t.key
-                ? "border-primary-600 text-primary-700"
-                : "border-transparent text-ink-500 hover:text-ink-700"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        <div className="flex-1" />
-        {activeTab === "notes" && (
-          <button
-            onClick={() => navigate(`/expediente/${patientId}/notes/new`)}
-            className="text-sm text-primary-600 hover:text-primary-800 px-2"
-          >
-            + Nueva nota
-          </button>
-        )}
-        {activeTab === "diagnoses" && (
-          <button
-            onClick={() => navigate(`/expediente/${patientId}/diagnoses/new`)}
-            className="text-sm text-primary-600 hover:text-primary-800 px-2"
-          >
-            + Agregar diagnostico
-          </button>
-        )}
-        {activeTab === "treatments" && (
-          <button
-            onClick={() => navigate(`/expediente/${patientId}/treatments/new`)}
-            className="text-sm text-primary-600 hover:text-primary-800 px-2"
-          >
-            + Agregar tratamiento
-          </button>
-        )}
-        {activeTab === "consents" && (
-          <button
-            onClick={() => navigate(`/expediente/${patientId}/consents/new`)}
-            className="text-sm text-primary-600 hover:text-primary-800 px-2"
-          >
-            + Agregar consentimiento
-          </button>
-        )}
-        {activeTab === "lab" && (
-          <button
-            onClick={() => navigate(`/expediente/${patientId}/lab-orders/new`)}
-            className="text-sm text-primary-600 hover:text-primary-800 px-2"
-          >
-            + Solicitar estudio
-          </button>
-        )}
-        {activeTab === "prescriptions" && (
-          <button
-            onClick={() => navigate(`/expediente/${patientId}/prescriptions/new`)}
-            className="text-sm text-primary-600 hover:text-primary-800 px-2"
-          >
-            + Nueva receta
-          </button>
-        )}
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="flex gap-1 border-b border-ink-100 min-w-max px-4 sm:px-0">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`px-3 sm:px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === t.key
+                  ? "border-primary-600 text-primary-700"
+                  : "border-transparent text-ink-500 hover:text-ink-700"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+          <div className="flex-1 min-w-4" />
+          {activeTab === "notes" && (
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/notes/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Nueva nota
+            </button>
+          )}
+          {activeTab === "diagnoses" && (
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/diagnoses/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Agregar diagnostico
+            </button>
+          )}
+          {activeTab === "treatments" && (
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/treatments/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Agregar tratamiento
+            </button>
+          )}
+          {activeTab === "consents" && (
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/consents/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Agregar consentimiento
+            </button>
+          )}
+          {activeTab === "lab" && (
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/lab-orders/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Solicitar estudio
+            </button>
+          )}
+          {activeTab === "prescriptions" && (
+            <button
+              onClick={() => navigate(`/expediente/${patientId}/prescriptions/new`)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              + Nueva receta
+            </button>
+          )}
+        </div>
       </div>
 
       {activeTab === "notes" && (
@@ -558,10 +560,10 @@ export default function ExpedientePage() {
             </div>
           ) : (
             prescriptions.map((p) => (
-              <div key={p.id} className="card">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+              <div key={p.id} className="card p-3 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-ink-900">{p.medication} {p.dosage}</span>
                       <span className={`badge ${
                         p.status === "ACTIVE" ? "bg-success-100 text-success-700" :
@@ -581,20 +583,22 @@ export default function ExpedientePage() {
                     )}
                     <p className="text-xs text-ink-400 mt-1">{formatDate(p.prescribedAt)}</p>
                   </div>
-                  {p.status === "ACTIVE" && (
+                  <div className="flex gap-2 shrink-0">
+                    {p.status === "ACTIVE" && (
+                      <button
+                        onClick={() => navigate(`/farmacia/pos?prescriptionId=${p.id}`)}
+                        className="btn-primary text-xs whitespace-nowrap"
+                      >
+                        Surtir
+                      </button>
+                    )}
                     <button
-                      onClick={() => navigate(`/farmacia/pos?prescriptionId=${p.id}`)}
-                      className="btn-primary text-xs whitespace-nowrap ml-4"
+                      onClick={() => downloadPdf(p.id)}
+                      className="btn-secondary text-xs whitespace-nowrap"
                     >
-                      Surtir
+                      PDF
                     </button>
-                  )}
-                  <button
-                    onClick={() => downloadPdf(p.id)}
-                    className="btn-secondary text-xs whitespace-nowrap ml-2"
-                  >
-                    PDF
-                  </button>
+                  </div>
                 </div>
               </div>
             ))

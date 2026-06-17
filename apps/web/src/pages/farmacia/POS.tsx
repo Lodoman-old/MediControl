@@ -131,9 +131,9 @@ export default function POSPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-ink-900">Punto de Venta</h2>
+    <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 className="text-xl sm:text-2xl font-semibold text-ink-900">Punto de Venta</h2>
         <button onClick={() => navigate(prescriptionId ? "/expediente" : "/farmacia")} className="text-sm text-ink-500 hover:text-ink-700">Volver</button>
       </div>
 
@@ -172,7 +172,7 @@ export default function POSPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <div className="card space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div><label className="label">Sucursal</label>
                   <select value={branchId} onChange={e => setBranchId(e.target.value)} className="input" required>
                     <option value="">Seleccionar...</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -272,7 +272,7 @@ export default function POSPage() {
             </div>
 
             {cart.length > 0 && (
-              <div className="card p-0 overflow-hidden">
+              <div className="card p-0 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-ink-50 text-ink-600 text-left">
                     <th className="px-4 py-3 font-medium">Producto</th>

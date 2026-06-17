@@ -73,32 +73,32 @@ export default function PagosPage() {
   const canCreate = user?.roles.includes("ADMIN") || user?.roles.includes("DOCTOR") || user?.roles.includes("SUPERADMIN");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-ink-900">Pagos</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="text-xl sm:text-2xl font-semibold text-ink-900">Pagos</h2>
         {canCreate && (
-          <button onClick={() => navigate("/pagos/nuevo")} className="btn-primary">
+          <button onClick={() => navigate("/pagos/nuevo")} className="btn-primary text-sm w-full sm:w-auto">
             Nuevo pago
           </button>
         )}
       </div>
 
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="card">
-            <p className="text-sm text-ink-500">Total del dia</p>
-            <p className="text-2xl font-bold text-ink-900">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Total del dia</p>
+            <p className="text-xl sm:text-2xl font-bold text-ink-900">
               ${Number(summary.total).toLocaleString("es-MX")}
             </p>
           </div>
-          <div className="card">
-            <p className="text-sm text-ink-500">Transacciones</p>
-            <p className="text-2xl font-bold text-ink-900">{summary.count}</p>
+          <div className="card p-3 sm:p-6">
+            <p className="text-xs sm:text-sm text-ink-500">Transacciones</p>
+            <p className="text-xl sm:text-2xl font-bold text-ink-900">{summary.count}</p>
           </div>
           {Object.entries(summary.byMethod).slice(0, 2).map(([method, amount]) => (
-            <div key={method} className="card">
-              <p className="text-sm text-ink-500">{methodLabel(method)}</p>
-              <p className="text-2xl font-bold text-ink-900">
+            <div key={method} className="card p-3 sm:p-6">
+              <p className="text-xs sm:text-sm text-ink-500">{methodLabel(method)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-ink-900">
                 ${Number(amount).toLocaleString("es-MX")}
               </p>
             </div>
@@ -106,7 +106,7 @@ export default function PagosPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <label className="text-sm text-ink-500">Fecha:</label>
         <input
           type="date"
@@ -124,7 +124,7 @@ export default function PagosPage() {
         </div>
       )}
 
-      <div className="card p-0 overflow-hidden">
+      <div className="card p-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-ink-50 text-ink-600 text-left">

@@ -66,22 +66,22 @@ export default function UsersListPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-ink-900">Usuarios</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="text-xl sm:text-2xl font-semibold text-ink-900">Usuarios</h2>
         <button
           onClick={() => navigate("/admin/users/new")}
-          className="btn-primary"
+          className="btn-primary text-sm w-full sm:w-auto"
         >
           Nuevo usuario
         </button>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           placeholder="Buscar por nombre o email..."
-          className="input max-w-sm"
+          className="input w-full sm:max-w-sm"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
@@ -93,7 +93,7 @@ export default function UsersListPage() {
         </div>
       )}
 
-      <div className="card p-0 overflow-hidden">
+      <div className="card p-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-ink-50 text-ink-600 text-left">

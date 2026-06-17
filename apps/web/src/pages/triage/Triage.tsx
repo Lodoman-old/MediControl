@@ -185,8 +185,8 @@ export default function TriagePage() {
           ) : (
             <div className="space-y-3">
               {appointments.map((a) => (
-                <div key={a.id} className="flex items-center justify-between p-3 bg-ink-50 rounded-lg">
-                  <div>
+                <div key={a.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-ink-50 rounded-lg">
+                  <div className="min-w-0">
                     <p className="font-medium text-ink-900">{a.patient.fullName}</p>
                     <p className="text-sm text-ink-500">{a.service.name} - {a.doctorName}</p>
                     <p className="text-xs text-ink-400">
@@ -195,7 +195,7 @@ export default function TriagePage() {
                       {appointmentStatusLabel(a.status)}
                     </p>
                   </div>
-                  <button onClick={() => setSelected(a)} className="btn-primary text-sm">
+                  <button onClick={() => setSelected(a)} className="btn-primary text-sm w-full sm:w-auto">
                     Tomar signos
                   </button>
                 </div>
