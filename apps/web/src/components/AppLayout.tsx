@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ReactNode, useCallback } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { useAuthStore } from "@/stores/authStore";

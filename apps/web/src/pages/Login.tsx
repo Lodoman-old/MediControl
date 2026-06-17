@@ -121,18 +121,18 @@ export default function LoginPage() {
             &copy; {new Date().getFullYear()} MediControl.
           </p>
         </aside>
-        <main className="flex items-center justify-center p-6 bg-surface-alt">
+        <main className="flex items-center justify-center p-6 bg-gradient-to-br from-primary-600 to-primary-800 lg:bg-surface-alt">
           <div className="w-full max-w-md">
-            <div className="lg:hidden mb-8 flex justify-center">
-              <Logo variant="horizontal" className="h-12" />
+            <div className="lg:hidden mb-6 flex justify-center">
+              <Logo variant="isopo" className="h-14 w-14 bg-white rounded-lg p-2" />
             </div>
-            <div className="card">
-              <h2 className="text-2xl font-semibold text-ink-900">
+            <div className="lg:card space-y-1">
+              <h2 className="text-2xl font-semibold text-white lg:text-ink-900">
                 Codigo de verificacion
               </h2>
-              <p className="text-sm text-ink-500 mt-1">
+              <p className="text-sm text-primary-100 lg:text-ink-500 mt-1">
                 Abre tu app autenticadora e ingresa el codigo de 6 digitos para{" "}
-                <span className="font-medium">{getValues("email")}</span>.
+                <span className="font-medium text-white lg:text-ink-900">{getValues("email")}</span>.
               </p>
               {mfaError && (
                 <div className="mt-4 p-3 bg-danger-50 border border-danger-200 rounded-lg">
@@ -141,7 +141,7 @@ export default function LoginPage() {
               )}
               <form onSubmit={onMfaSubmit} className="mt-6 space-y-4">
                 <div>
-                  <label htmlFor="mfaCode" className="label">
+                  <label htmlFor="mfaCode" className="label text-primary-100 lg:text-ink-700">
                     Codigo TOTP
                   </label>
                   <input
@@ -149,7 +149,7 @@ export default function LoginPage() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    className="input text-center text-2xl tracking-widest"
+                    className="w-full rounded-md border border-primary-300 lg:border-ink-300 bg-white/10 lg:bg-white px-3 py-2 text-center text-2xl tracking-widest text-white lg:text-ink-900 placeholder:text-primary-200 lg:placeholder:text-ink-400 focus:border-white lg:focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-white/30 lg:focus:ring-primary-500/20"
                     placeholder="000000"
                     maxLength={6}
                     value={mfaCode}
@@ -160,7 +160,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={verifyMfa.isPending || mfaCode.length !== 6}
-                  className="btn-primary w-full"
+                  className="w-full rounded-md px-4 py-2.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 bg-white text-primary-700 hover:bg-primary-50 focus:ring-primary-500 lg:text-white lg:bg-primary-500 lg:hover:bg-primary-600 lg:focus:ring-primary-500"
                 >
                   {verifyMfa.isPending ? "Verificando..." : "Verificar"}
                 </button>
@@ -190,17 +190,17 @@ export default function LoginPage() {
         </p>
       </aside>
 
-      <main className="flex items-center justify-center p-6 bg-surface-alt">
+      <main className="flex items-center justify-center p-6 bg-gradient-to-br from-primary-600 to-primary-800 lg:bg-surface-alt">
         <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8 flex justify-center">
-            <Logo variant="horizontal" className="h-12" />
+          <div className="lg:hidden mb-6 flex justify-center">
+            <Logo variant="isopo" className="h-14 w-14 bg-white rounded-lg p-2" />
           </div>
 
-          <div className="card">
-            <h2 className="text-2xl font-semibold text-ink-900">
+          <div className="lg:card space-y-1">
+            <h2 className="text-2xl font-semibold text-white lg:text-ink-900">
               Iniciar sesion
             </h2>
-            <p className="text-sm text-ink-500 mt-1">
+            <p className="text-sm text-primary-100 lg:text-ink-500 mt-1">
               Acceso para personal administrativo y medicos.
             </p>
 
@@ -214,38 +214,38 @@ export default function LoginPage() {
 
             <form onSubmit={onSubmit} className="mt-6 space-y-4">
               <div>
-                <label htmlFor="email" className="label">
+                <label htmlFor="email" className="label text-primary-100 lg:text-ink-700">
                   Correo electronico
                 </label>
                 <input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className="input"
+                  className="w-full rounded-md border border-primary-300 lg:border-ink-300 bg-white/10 lg:bg-white px-3 py-2 text-white lg:text-ink-900 placeholder:text-primary-200 lg:placeholder:text-ink-400 focus:border-white lg:focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-white/30 lg:focus:ring-primary-500/20"
                   placeholder="medico@clinica.mx"
                   {...register("email")}
                 />
                 {errors.email && (
-                  <p className="text-danger-500 text-xs mt-1">
+                  <p className="text-red-300 lg:text-danger-500 text-xs mt-1">
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="password" className="label">
+                <label htmlFor="password" className="label text-primary-100 lg:text-ink-700">
                   Contrasena
                 </label>
                 <input
                   id="password"
                   type="password"
                   autoComplete="current-password"
-                  className="input"
+                  className="w-full rounded-md border border-primary-300 lg:border-ink-300 bg-white/10 lg:bg-white px-3 py-2 text-white lg:text-ink-900 placeholder:text-primary-200 lg:placeholder:text-ink-400 focus:border-white lg:focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-white/30 lg:focus:ring-primary-500/20"
                   placeholder="********"
                   {...register("password")}
                 />
                 {errors.password && (
-                  <p className="text-danger-500 text-xs mt-1">
+                  <p className="text-red-300 lg:text-danger-500 text-xs mt-1">
                     {errors.password.message}
                   </p>
                 )}
@@ -254,23 +254,23 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={login.isPending}
-                className="btn-primary w-full"
+                className="w-full rounded-md px-4 py-2.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 bg-white text-primary-700 hover:bg-primary-50 focus:ring-primary-500 lg:text-white lg:bg-primary-500 lg:hover:bg-primary-600 lg:focus:ring-primary-500"
               >
                 {login.isPending ? "Ingresando..." : "Ingresar"}
               </button>
             </form>
 
-            <p className="text-xs text-ink-500 mt-6 text-center">
+            <p className="text-xs text-primary-200 lg:text-ink-500 mt-6 text-center">
               Al continuar aceptas nuestro{" "}
-              <a href="#" className="text-primary-600 hover:underline">
+              <a href="#" className="text-white lg:text-primary-600 hover:underline">
                 Aviso de Privacidad
               </a>
               .
             </p>
           </div>
 
-          <div className="mt-4 p-3 bg-white border border-ink-100 rounded-lg text-xs text-ink-500">
-            <p className="font-semibold text-ink-700 mb-1">Cuentas demo:</p>
+          <div className="mt-4 p-3 bg-white/10 lg:bg-white border border-primary-200 lg:border-ink-100 rounded-lg text-xs text-primary-100 lg:text-ink-500">
+            <p className="font-semibold text-white lg:text-ink-700 mb-1">Cuentas demo:</p>
             <p>admin@medicontrol.mx / Admin123!Demo</p>
             <p>doctor@medicontrol.mx / Doctor123!Demo</p>
           </div>
