@@ -7,7 +7,7 @@ import Logo from "@/components/Logo";
 import { useLogin, useVerifyMfaLogin } from "@/hooks/useAuth";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 import type { AuthUser } from "@/stores/authStore";
-import { api, extractErrorMessage } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/api";
 
 const loginSchema = z.object({
   email: z.string().email("Correo invalido"),
@@ -44,38 +44,16 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    let cancelled = false;
-    const timeout = setTimeout(() => {
-      if (!cancelled) {
-        clear();
-        setCheckingSession(false);
-      }
-    }, 5000);
-
-    if (!isAuthed) {
-      clearTimeout(timeout);
-      setCheckingSession(false);
-      return;
-    }
-
-    api.get("/auth/me").then(() => {
-      if (cancelled) return;
-      clearTimeout(timeout);
-      setCheckingSession(false);
+    if (isAuthed) {
       if (user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
         const from = (location.state as FromState | null)?.from?.pathname ?? "/dashboard";
         navigate(from, { replace: true });
       }
-    }).catch(() => {
-      if (cancelled) return;
-      clearTimeout(timeout);
-      clear();
+    } else {
       setCheckingSession(false);
-    });
-
-    return () => { cancelled = true; clearTimeout(timeout); };
+    }
   }, []);
 
   const onSubmit = handleSubmit(async (data) => {
