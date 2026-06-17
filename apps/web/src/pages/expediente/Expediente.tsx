@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
 
@@ -156,6 +156,8 @@ export default function ExpedientePage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prescMenuOpen, setPrescMenuOpen] = useState(false);
+  const prescMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!patientId) return;
@@ -173,6 +175,16 @@ export default function ExpedientePage() {
       .catch((err) => setError(extractErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [patientId]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (prescMenuRef.current && !prescMenuRef.current.contains(e.target as Node)) {
+        setPrescMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const formatDate = (iso: string) => {
     try { return new Date(iso).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -306,17 +318,31 @@ export default function ExpedientePage() {
             </button>
           )}
           {activeTab === "prescriptions" && (
-            <>
-              <button onClick={() => downloadAllPrescriptionsPdf(patientId)} className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap">
-                Receta completa PDF
-              </button>
+            <div className="relative" ref={prescMenuRef}>
               <button
-                onClick={() => navigate(`/expediente/${patientId}/prescriptions/new`)}
+                type="button"
+                onClick={() => setPrescMenuOpen((o) => !o)}
                 className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
               >
-                + Nueva receta
+                Recetas ▾
               </button>
-            </>
+              {prescMenuOpen && (
+                <div className="absolute top-full right-0 mt-1 bg-white border border-ink-200 rounded-lg shadow-lg py-1 min-w-44 z-50">
+                  <button
+                    onClick={() => { setPrescMenuOpen(false); navigate(`/expediente/${patientId}/prescriptions/new`); }}
+                    className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
+                  >
+                    + Nueva receta
+                  </button>
+                  <button
+                    onClick={() => { setPrescMenuOpen(false); downloadAllPrescriptionsPdf(patientId); }}
+                    className="block w-full text-left px-4 py-2 text-sm text-ink-700 hover:bg-ink-50"
+                  >
+                    Receta completa PDF
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
