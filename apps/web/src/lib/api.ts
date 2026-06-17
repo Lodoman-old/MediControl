@@ -70,8 +70,8 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(null);
         useAuthStore.getState().clear();
-        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-          window.location.href = "/login";
+        if (typeof window !== "undefined" && window.location.pathname !== "/") {
+          window.location.href = "/";
         }
         return Promise.reject(refreshErr);
       } finally {
