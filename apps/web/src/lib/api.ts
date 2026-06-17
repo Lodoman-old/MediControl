@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/stores/authStore";
+import { isTokenExpired } from "@/lib/jwt";
 
 // En desarrollo usa el proxy de Vite (/api/v1 → localhost:3000/api/v1)
 // En produccion se configura con VITE_API_URL
@@ -28,10 +29,52 @@ const processQueue = (token: string | null) => {
   pendingQueue = [];
 };
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.set("Authorization", `Bearer ${token}`);
+const doRefresh = async (): Promise<string | null> => {
+  try {
+    const refreshed = await axios.post<{ tokens: { accessToken: string } }>(
+      `${API_BASE_URL}/auth/refresh`,
+      {},
+      { withCredentials: true, timeout: 60_000 },
+    );
+    return refreshed.data.tokens.accessToken;
+  } catch {
+    return null;
+  }
+};
+
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  const { accessToken, setAccessToken, clear } = useAuthStore.getState();
+  if (!accessToken) return config;
+
+  if (isTokenExpired(accessToken)) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      const newToken = await doRefresh();
+      isRefreshing = false;
+      if (newToken) {
+        setAccessToken(newToken);
+        processQueue(newToken);
+        config.headers.set("Authorization", `Bearer ${newToken}`);
+      } else {
+        processQueue(null);
+        clear();
+        if (typeof window !== "undefined" && window.location.pathname !== "/") {
+          window.location.href = "/";
+        }
+        return config;
+      }
+    } else {
+      return new Promise((resolve) => {
+        pendingQueue.push((token) => {
+          if (token) {
+            config.headers.set("Authorization", `Bearer ${token}`);
+          }
+          resolve(config);
+        });
+      });
+    }
+  } else {
+    config.headers.set("Authorization", `Bearer ${accessToken}`);
   }
   return config;
 });

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { useLogin, useVerifyMfaLogin } from "@/hooks/useAuth";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
@@ -254,7 +254,16 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <p className="text-xs text-primary-200 lg:text-ink-500 mt-6 text-center">
+            <div className="mt-4 flex flex-col items-center gap-2 text-sm">
+              <Link to="/forgot-password" className="text-primary-200 lg:text-primary-600 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+              <Link to="/register" className="text-primary-200 lg:text-primary-600 hover:underline">
+                ¿No tienes cuenta? Registrate aqui
+              </Link>
+            </div>
+
+            <p className="text-xs text-primary-200 lg:text-ink-500 mt-4 text-center">
               Al continuar aceptas nuestro{" "}
               <a href="#" className="text-white lg:text-primary-600 hover:underline">
                 Aviso de Privacidad

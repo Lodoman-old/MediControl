@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { api } from "@/lib/api";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
+import { isTokenExpired } from "@/lib/jwt";
 
 interface Props {
   children: ReactNode;
@@ -16,6 +18,47 @@ export default function ProtectedRoute({
   const location = useLocation();
   const isAuthed = useAuthStore(selectIsAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const setAccessToken = useAuthStore((s) => s.setAccessToken);
+  const clear = useAuthStore((s) => s.clear);
+  const [validating, setValidating] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthed || !accessToken) {
+      setValidating(false);
+      return;
+    }
+
+    if (!isTokenExpired(accessToken)) {
+      setValidating(false);
+      return;
+    }
+
+    let cancelled = false;
+    api.post("/auth/refresh", {}).then(({ data }) => {
+      if (!cancelled) {
+        setAccessToken(data.tokens.accessToken);
+        setValidating(false);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        clear();
+        setValidating(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [isAuthed, accessToken, setAccessToken, clear]);
+
+  if (validating) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-surface-alt">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto" />
+          <p className="text-ink-500 text-sm mt-3">Verificando sesion...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthed) {
     return <Navigate to="/login" replace state={{ from: location }} />;

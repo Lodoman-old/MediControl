@@ -1,5 +1,7 @@
 import { Route, Routes, Navigate } from "react-router-dom";
 import LoginPage from "@/pages/Login";
+import ForgotPasswordPage from "@/pages/ForgotPassword";
+import RegisterPage from "@/pages/Register";
 import DashboardPage from "@/pages/Dashboard";
 import ChangePasswordPage from "@/pages/ChangePassword";
 import MfaSetupPage from "@/pages/MfaSetup";
@@ -42,6 +44,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route
         path="/dashboard"
