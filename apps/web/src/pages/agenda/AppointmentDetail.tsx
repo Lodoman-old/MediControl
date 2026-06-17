@@ -108,6 +108,19 @@ export default function AppointmentDetailPage() {
     } catch {}
   };
 
+  const downloadAllPrescriptionsPdf = async () => {
+    if (!appt) return;
+    try {
+      const res = await api.get(`/prescriptions/patient/${appt.patient.id}/pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `recetas-completas-${appt.patient.id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  };
+
   const downloadLabOrderPdf = async (orderId: string) => {
     try {
       const res = await api.get(`/clinical-records/${appt!.patient.id}/lab-orders/${orderId}/pdf`, { responseType: "blob" });
@@ -239,7 +252,12 @@ export default function AppointmentDetailPage() {
 
       {prescriptions.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-ink-900 mb-3">Recetas</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-ink-900">Recetas</h3>
+            <button onClick={downloadAllPrescriptionsPdf} className="btn-secondary text-xs">
+              Receta completa PDF
+            </button>
+          </div>
           <div className="space-y-2">
             {prescriptions.map((p) => (
               <div key={p.id} className="flex items-center justify-between border-b border-ink-200 pb-2">

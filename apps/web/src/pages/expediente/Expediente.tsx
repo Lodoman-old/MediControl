@@ -119,6 +119,18 @@ const downloadPdf = async (id: string) => {
   } catch {}
 };
 
+const downloadAllPrescriptionsPdf = async (patientId: string) => {
+  try {
+    const res = await api.get(`/prescriptions/patient/${patientId}/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recetas-completas-${patientId.slice(0, 8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {}
+};
+
 const downloadLabOrderPdf = async (patientId: string, orderId: string) => {
   try {
     const res = await api.get(`/clinical-records/${patientId}/lab-orders/${orderId}/pdf`, { responseType: "blob" });
@@ -294,12 +306,17 @@ export default function ExpedientePage() {
             </button>
           )}
           {activeTab === "prescriptions" && (
-            <button
-              onClick={() => navigate(`/expediente/${patientId}/prescriptions/new`)}
-              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
-            >
-              + Nueva receta
-            </button>
+            <>
+              <button onClick={() => downloadAllPrescriptionsPdf(patientId)} className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap">
+                Receta completa PDF
+              </button>
+              <button
+                onClick={() => navigate(`/expediente/${patientId}/prescriptions/new`)}
+                className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+              >
+                + Nueva receta
+              </button>
+            </>
           )}
         </div>
       </div>

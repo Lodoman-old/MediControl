@@ -28,6 +28,19 @@ export class PrescriptionsController {
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @ApiOperation({ summary: "Descargar todas las recetas activas de un paciente en un solo PDF" })
+  @Get("patient/:patientId/pdf")
+  async getPatientPdf(@CurrentUser() user: AuthenticatedUser, @Param("patientId") patientId: string, @Res() res: Response) {
+    const pdf = await this.rx.generatePatientPdf(user.organizationId, patientId);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="recetas-${patientId.slice(0, 8)}.pdf"`,
+      "Content-Length": pdf.length,
+    });
+    res.end(pdf);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
   @ApiOperation({ summary: "Obtener receta por ID" })
   @Get(":id")
   async findOne(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {

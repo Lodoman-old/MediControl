@@ -327,6 +327,184 @@ export class PrescriptionsService {
     });
   }
 
+  async generatePatientPdf(organizationId: string, patientId: string): Promise<Buffer> {
+    const prescriptions = await this.prisma.prescription.findMany({
+      where: { organizationId, patientId, status: "ACTIVE" },
+      include: {
+        patient: { include: { person: true } },
+        doctor: { include: { person: true, organization: true } },
+      },
+      orderBy: { prescribedAt: "desc" },
+    });
+    if (!prescriptions.length) throw new NotFoundException("No hay recetas activas para este paciente");
+
+    const p = prescriptions[0];
+    const patientPerson = p.patient?.person;
+    const doctorPerson = p.doctor?.person;
+
+    const patientName = patientPerson
+      ? `${patientPerson.firstName} ${patientPerson.lastNameP} ${patientPerson.lastNameM ?? ""}`.trim()
+      : "Paciente";
+    const doctorName = doctorPerson
+      ? `${doctorPerson.firstName} ${doctorPerson.lastNameP} ${doctorPerson.lastNameM ?? ""}`.trim()
+      : "Medico";
+    const cedulaProfesional = p.doctor?.cedulaProfesional ?? "";
+    const cedulaEspecialidad = p.doctor?.cedulaEspecialidad ?? "";
+    const specialtyCode = p.doctor?.specialtyCode ?? "";
+
+    const orgName = p.doctor?.organization?.legalName ?? "";
+    const fiscalAddress = p.doctor?.organization?.fiscalAddress as Record<string, any> | null;
+    const addressStr = fiscalAddress
+      ? [
+          fiscalAddress.street,
+          fiscalAddress.exteriorNumber && `Ext.${fiscalAddress.exteriorNumber}`,
+          fiscalAddress.interiorNumber && `Int.${fiscalAddress.interiorNumber}`,
+          fiscalAddress.neighborhood,
+          fiscalAddress.city,
+          fiscalAddress.state,
+          fiscalAddress.zipCode && `C.P. ${fiscalAddress.zipCode}`,
+        ].filter(Boolean).join(", ")
+      : "";
+
+    const age = patientPerson?.birthDate
+      ? Math.floor((new Date().getTime() - new Date(patientPerson.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : null;
+
+    const specialtyName = specialtyCode ? specialtyCode.replace(/_/g, " ") : "";
+    const dateStr = p.prescribedAt.toLocaleDateString("es-MX", {
+      day: "numeric", month: "long", year: "numeric",
+    });
+
+    const vitalSigns = await this.prisma.vitalSign.findFirst({
+      where: { appointment: { patientId } },
+      orderBy: { measuredAt: "desc" },
+    });
+
+    return new Promise((resolve) => {
+      const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+      const chunks: Buffer[] = [];
+      doc.on("data", (c) => chunks.push(c));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+      const pw = doc.page.width - 100;
+      const margin = 50;
+
+      doc.fontSize(18).font("Helvetica-Bold").fillColor("#000");
+      doc.text("DR. " + doctorName.toUpperCase(), { align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(14).font("Helvetica-Bold").fillColor("#222");
+      doc.text(specialtyName.toUpperCase() || "MEDICINA GENERAL", { align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica").fillColor("#444");
+      doc.text(
+        `CÉDULA PROFESIONAL: ${cedulaProfesional || "N/A"}    CÉDULA ESPECIALIDAD: ${cedulaEspecialidad || "N/A"}    SSG: ${orgName || "N/A"}`,
+        { align: "center" },
+      );
+      doc.moveDown(0.2);
+      doc.fontSize(8.5).font("Helvetica").fillColor("#777");
+      doc.text(`DOMICILIO: ${addressStr || orgName || "N/A"}`, { align: "center" });
+
+      doc.moveDown(0.8);
+      doc.fillColor("#ccc");
+      doc.moveTo(margin, doc.y).lineTo(margin + pw, doc.y).stroke("#bbb");
+      doc.moveDown(0.6);
+
+      doc.fillColor("#000");
+      doc.fontSize(10).font("Helvetica");
+      const ageStr = age !== null ? `${age} años` : "";
+      doc.text(
+        `PACIENTE: ${patientName.toUpperCase()}    ${ageStr ? `EDAD: ${ageStr}    ` : ""}FECHA: ${dateStr.toUpperCase()}`,
+        { align: "left" },
+      );
+      doc.moveDown(0.6);
+
+      if (vitalSigns) {
+        doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
+        doc.text("SIGNOS VITALES:", { align: "left" });
+        doc.fontSize(8.5).font("Helvetica").fillColor("#555");
+        const vs: string[] = [];
+        if (vitalSigns.bloodPressureSystolic) vs.push(`TA: ${vitalSigns.bloodPressureSystolic}/${vitalSigns.bloodPressureDiastolic ?? "?"} mmHg`);
+        if (vitalSigns.heartRate) vs.push(`FC: ${vitalSigns.heartRate} lpm`);
+        if (vitalSigns.respiratoryRate) vs.push(`FR: ${vitalSigns.respiratoryRate} rpm`);
+        if (vitalSigns.temperature) vs.push(`TEMP: ${Number(vitalSigns.temperature).toFixed(1)} °C`);
+        if (vitalSigns.oxygenSaturation) vs.push(`SpO2: ${vitalSigns.oxygenSaturation}%`);
+        if (vitalSigns.weight) vs.push(`PESO: ${Number(vitalSigns.weight).toFixed(1)} kg`);
+        if (vitalSigns.height) vs.push(`TALLA: ${Number(vitalSigns.height).toFixed(1)} cm`);
+        if (vitalSigns.glucose) vs.push(`GLU: ${vitalSigns.glucose} mg/dL`);
+        if (vs.length > 0) doc.text(vs.join("   |   "), { align: "left" });
+        doc.fillColor("#000");
+        doc.moveDown(0.5);
+      }
+
+      doc.fontSize(11).font("Helvetica-Bold").fillColor("#111");
+      doc.text("MEDICAMENTOS PRESCRITOS:", { align: "left" });
+      doc.moveDown(0.3);
+
+      for (let i = 0; i < prescriptions.length; i++) {
+        const rx = prescriptions[i];
+        const yBefore = doc.y;
+        if (yBefore > 650) doc.addPage();
+
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#111");
+        doc.text(`${i + 1}. ${rx.medication}`, { indent: 10 });
+        doc.fontSize(9).font("Helvetica").fillColor("#333");
+        doc.text(`   DOSIS: ${rx.dosage}`, { indent: 20 });
+        doc.text(`   FRECUENCIA: ${rx.frequency}`, { indent: 20 });
+        if (rx.route) doc.text(`   VÍA: ${rx.route}`, { indent: 20 });
+        if (rx.duration) doc.text(`   DURACIÓN: ${rx.duration}`, { indent: 20 });
+        if (rx.quantity) doc.text(`   CANTIDAD: ${rx.quantity}`, { indent: 20 });
+        if (rx.refills && rx.refills > 0) doc.text(`   REFRENDOS: ${rx.refills}`, { indent: 20 });
+        if (rx.indications) doc.text(`   INDICACIONES: ${rx.indications}`, { indent: 20 });
+        doc.moveDown(0.5);
+      }
+
+      doc.fillColor("#000");
+      doc.moveDown(1);
+      doc.fillColor("#ccc");
+      doc.moveTo(margin, doc.y).lineTo(margin + pw, doc.y).stroke("#bbb");
+      doc.moveDown(0.8);
+
+      const sigY = doc.y;
+      doc.fillColor("#333");
+      doc.fontSize(9).font("Helvetica");
+      doc.text("FIRMA DEL MÉDICO:", margin, sigY, { align: "left" });
+      doc.moveDown(1.2);
+      doc.fillColor("#999");
+      doc.moveTo(margin, doc.y).lineTo(margin + 200, doc.y).stroke("#999");
+      doc.moveDown(0.3);
+      doc.fontSize(8).fillColor("#999");
+      doc.text("Firma autógrafa del médico", margin, doc.y, { align: "left" });
+      doc.fillColor("#000");
+
+      const leftBottomY = doc.y;
+      const rightX = doc.page.width / 2 + 20;
+      doc.fontSize(9).font("Helvetica-Bold").fillColor("#333");
+      doc.text("PRÓXIMA CITA:", rightX, sigY, { align: "left" });
+      doc.moveDown(2);
+      doc.fillColor("#999");
+      doc.moveTo(rightX, doc.y).lineTo(rightX + 200, doc.y).stroke("#999");
+      doc.moveDown(0.3);
+      doc.fontSize(8).font("Helvetica").fillColor("#999");
+      doc.text("Fecha de seguimiento", rightX, doc.y, { align: "left" });
+      doc.fillColor("#000");
+
+      doc.y = Math.max(leftBottomY, doc.y);
+      doc.moveDown(1.5);
+
+      doc.fontSize(7.5).fillColor("#aaa");
+      doc.text(
+        "Esta receta es válida únicamente con la firma del médico. Sujeto a las disposiciones de la NOM-072-SSA3-2012.",
+        { align: "center" },
+      );
+      doc.moveDown(0.2);
+      doc.fontSize(7).fillColor("#bbb");
+      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  MediControl`, { align: "center" });
+      doc.fillColor("#000");
+
+      doc.end();
+    });
+  }
+
   async remove(organizationId: string, id: string) {
     const existing = await this.findOne(organizationId, id);
     await this.prisma.prescription.update({
