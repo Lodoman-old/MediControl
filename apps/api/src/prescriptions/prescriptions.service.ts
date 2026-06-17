@@ -239,19 +239,20 @@ export class PrescriptionsService {
       doc.text(p.medication, { align: "left" });
       doc.moveDown(0.2);
       doc.fontSize(9.5).font("Helvetica").fillColor("#333");
-      doc.text(`DOSIS: ${p.dosage}`, { indent: 10 });
-      doc.text(`FRECUENCIA: ${p.frequency}`, { indent: 10 });
-      if (p.route) doc.text(`VÍA: ${p.route}`, { indent: 10 });
-      if (p.duration) doc.text(`DURACIÓN: ${p.duration}`, { indent: 10 });
-      if (p.quantity) doc.text(`CANTIDAD: ${p.quantity}`, { indent: 10 });
-      if (p.refills && p.refills > 0) doc.text(`REFRENDOS: ${p.refills}`, { indent: 10 });
+      const rxFields: string[] = [
+        `DOSIS: ${p.dosage}`,
+        `FRECUENCIA: ${p.frequency}`,
+      ];
+      if (p.route) rxFields.push(`VIA: ${p.route}`);
+      if (p.duration) rxFields.push(`DURACION: ${p.duration}`);
+      if (p.quantity) rxFields.push(`CANTIDAD: ${p.quantity}`);
+      if (p.refills && p.refills > 0) rxFields.push(`REFRENDOS: ${p.refills}`);
+      doc.text(rxFields.join("   "), { indent: 10 });
 
       if (p.indications) {
-        doc.moveDown(0.3);
-        doc.fontSize(9.5).font("Helvetica-Bold").fillColor("#333");
-        doc.text("INDICACIONES:", { align: "left" });
-        doc.fontSize(9.5).font("Helvetica").fillColor("#444");
-        doc.text(p.indications, { indent: 10 });
+        doc.moveDown(0.2);
+        const indStr = `INDICACIONES: ${p.indications}`;
+        doc.text(indStr, { indent: 10 });
       }
 
       if (p.notes) {
@@ -448,13 +449,18 @@ export class PrescriptionsService {
         doc.fontSize(10).font("Helvetica-Bold").fillColor("#111");
         doc.text(`${i + 1}. ${rx.medication}`, { indent: 10 });
         doc.fontSize(9).font("Helvetica").fillColor("#333");
-        doc.text(`   DOSIS: ${rx.dosage}`, { indent: 20 });
-        doc.text(`   FRECUENCIA: ${rx.frequency}`, { indent: 20 });
-        if (rx.route) doc.text(`   VÍA: ${rx.route}`, { indent: 20 });
-        if (rx.duration) doc.text(`   DURACIÓN: ${rx.duration}`, { indent: 20 });
-        if (rx.quantity) doc.text(`   CANTIDAD: ${rx.quantity}`, { indent: 20 });
-        if (rx.refills && rx.refills > 0) doc.text(`   REFRENDOS: ${rx.refills}`, { indent: 20 });
-        if (rx.indications) doc.text(`   INDICACIONES: ${rx.indications}`, { indent: 20 });
+        const rxFields: string[] = [
+          `DOSIS: ${rx.dosage}`,
+          `FRECUENCIA: ${rx.frequency}`,
+        ];
+        if (rx.route) rxFields.push(`VIA: ${rx.route}`);
+        if (rx.duration) rxFields.push(`DURACION: ${rx.duration}`);
+        if (rx.quantity) rxFields.push(`CANTIDAD: ${rx.quantity}`);
+        if (rx.refills && rx.refills > 0) rxFields.push(`REFRENDOS: ${rx.refills}`);
+        doc.text(`   ${rxFields.join("   ")}`, { indent: 20 });
+        if (rx.indications) {
+          doc.text(`   INDICACIONES: ${rx.indications}`, { indent: 20 });
+        }
         doc.moveDown(0.5);
       }
 
