@@ -53,7 +53,7 @@ export class PharmacyController {
   @Roles("SUPERADMIN", "ADMIN")
   @Post("movements")
   async adjustStock(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateStockMovementDto) {
-    return this.pharm.adjustStock(u.organizationId, dto, u.userId);
+    return this.pharm.adjustStock(u.organizationId, u.roles, u.branchId, dto, u.userId);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")

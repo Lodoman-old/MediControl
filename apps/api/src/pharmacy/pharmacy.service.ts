@@ -86,9 +86,15 @@ export class PharmacyService {
     });
   }
 
-  async adjustStock(organizationId: string, dto: CreateStockMovementDto, userId = "system") {
+  async adjustStock(organizationId: string, roles: string[], userBranchId: string | null, dto: CreateStockMovementDto, userId = "system") {
+    const isSuperAdmin = roles.includes("SUPERADMIN");
     const batch = await this.prisma.inventoryBatch.findFirst({ where: { id: dto.batchId, organizationId } });
     if (!batch) throw new NotFoundException("Lote no encontrado");
+    if (!isSuperAdmin) {
+      if (!userBranchId) throw new ForbiddenException("No tienes una sucursal asignada");
+      if (!batch.branchId) throw new ForbiddenException("El lote no pertenece a ninguna sucursal");
+      if (batch.branchId !== userBranchId) throw new ForbiddenException("No puedes ajustar stock de otra sucursal");
+    }
 
     return this.prisma.$transaction(async (tx) => {
       let newStock = batch.currentStock;
@@ -147,9 +153,10 @@ export class PharmacyService {
         if (batchId) {
           const batch = await tx.inventoryBatch.findFirst({ where: { id: batchId, organizationId } });
           if (!batch) throw new NotFoundException(`Lote ${batchId} no encontrado`);
-          // Non-admin users can only sell from their own branch's inventory
-          if (!isAdmin && batch.branchId && userBranchId && batch.branchId !== userBranchId) {
-            throw new ForbiddenException("No puedes vender inventario de otra sucursal");
+          if (!isAdmin) {
+            if (!userBranchId) throw new ForbiddenException("No tienes una sucursal asignada");
+            if (!batch.branchId) throw new ForbiddenException("El lote no pertenece a ninguna sucursal");
+            if (batch.branchId !== userBranchId) throw new ForbiddenException("No puedes vender inventario de otra sucursal");
           }
           if (batch.currentStock < quantity) throw new BadRequestException(`Stock insuficiente para lote ${batch.batchNumber}`);
 
