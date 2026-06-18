@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractErrorMessage } from "@/lib/api";
 import { format } from "date-fns";
+import { useAuthStore } from "@/stores/authStore";
 
 interface CashRegister {
   id: string;
@@ -23,6 +24,7 @@ interface CashRegister {
 export default function CashRegisterPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [initialAmount, setInitialAmount] = useState("");
@@ -76,8 +78,9 @@ export default function CashRegisterPage() {
     e.preventDefault();
     setError("");
     if (!branches?.length) { setError("No hay sucursales disponibles"); return; }
+    const defaultBranchId = user?.branchId ?? branches[0].id;
     openMutation.mutate({
-      branchId: branches[0].id,
+      branchId: defaultBranchId,
       initialAmount: parseFloat(initialAmount) || 0,
       notes: notes || undefined,
     });

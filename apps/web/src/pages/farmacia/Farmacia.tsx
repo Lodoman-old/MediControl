@@ -57,7 +57,7 @@ export default function FarmaciaPage() {
   const [tab, setTab] = useState<"meds" | "batches">("meds");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
-  const [branchId, setBranchId] = useState<string>("");
+  const [branchId, setBranchId] = useState<string>(user?.branchId ?? "");
 
   // New medication form
   const [sku, setSku] = useState("");

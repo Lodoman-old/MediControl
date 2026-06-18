@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, extractErrorMessage } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface Medication { id: string; name: string; sku: string; barcode?: string; price: number; requiresPrescription: boolean; }
 interface Batch { id: string; batchNumber: string; currentStock: number; medicationId: string; expiryDate: string; }
@@ -19,8 +20,9 @@ export default function POSPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const prescriptionId = searchParams.get("prescriptionId") || undefined;
+  const user = useAuthStore((s) => s.user);
 
-  const [branchId, setBranchId] = useState("");
+  const [branchId, setBranchId] = useState(user?.branchId ?? "");
   const [patientId, setPatientId] = useState("");
   const [method, setMethod] = useState("CASH");
   const [cart, setCart] = useState<Array<{ medId: string; batchId: string; qty: number; price: number; name: string; prescriptionId?: string }>>([]);
