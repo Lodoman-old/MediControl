@@ -90,8 +90,8 @@ export class AdminController {
     return this.admin.updateUser(user.organizationId, id, dto);
   }
 
-  @Roles("SUPERADMIN", "ADMIN")
-  @ApiOperation({ summary: "Listar sucursales", description: "Lista las sucursales de la organizacion para el dropdown de usuarios." })
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
+  @ApiOperation({ summary: "Listar sucursales", description: "Lista las sucursales de la organizacion." })
   @Get("branches")
   async listBranches(@CurrentUser() user: AuthenticatedUser) {
     const branches = await this.admin.listBranches(user.organizationId);
