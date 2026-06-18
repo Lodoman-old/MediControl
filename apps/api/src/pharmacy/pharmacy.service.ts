@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateMedicationDto, UpdateMedicationDto, CreateBatchDto, CreateStockMovementDto, CreateSaleDto, CreateDispensingDto } from "./dto/pharmacy.dto";
 
@@ -65,12 +65,13 @@ export class PharmacyService {
     });
   }
 
-  async listBatches(organizationId: string, medicationId?: string) {
+  async listBatches(organizationId: string, medicationId?: string, branchId?: string) {
     const where: any = { organizationId };
     if (medicationId) where.medicationId = medicationId;
+    if (branchId) where.branchId = branchId;
     return this.prisma.inventoryBatch.findMany({
       where,
-      include: { medication: true },
+      include: { medication: true, branch: { select: { id: true, name: true, code: true } } },
       orderBy: { expiryDate: "asc" },
     });
   }
@@ -122,7 +123,8 @@ export class PharmacyService {
 
   // --- POS (SALES) ---
 
-  async createSale(organizationId: string, userId: string, dto: CreateSaleDto) {
+  async createSale(organizationId: string, userId: string, roles: string[], userBranchId: string | null, dto: CreateSaleDto) {
+    const isAdmin = roles.some((r) => ["SUPERADMIN", "ADMIN"].includes(r));
     const rawItems = (dto.items ?? []) as Array<Record<string, unknown>>;
     return this.prisma.$transaction(async (tx) => {
       const items: Array<{
@@ -145,6 +147,10 @@ export class PharmacyService {
         if (batchId) {
           const batch = await tx.inventoryBatch.findFirst({ where: { id: batchId, organizationId } });
           if (!batch) throw new NotFoundException(`Lote ${batchId} no encontrado`);
+          // Non-admin users can only sell from their own branch's inventory
+          if (!isAdmin && batch.branchId && userBranchId && batch.branchId !== userBranchId) {
+            throw new ForbiddenException("No puedes vender inventario de otra sucursal");
+          }
           if (batch.currentStock < quantity) throw new BadRequestException(`Stock insuficiente para lote ${batch.batchNumber}`);
 
           await tx.inventoryBatch.update({

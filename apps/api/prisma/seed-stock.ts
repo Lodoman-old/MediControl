@@ -11,6 +11,39 @@ async function main() {
   const orgId = org.id;
   console.log(`Using organization: ${org.legalName} (${orgId})`);
 
+  // Create second branch
+  const branchHQ = await prisma.branch.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000010" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-000000000010",
+      organizationId: orgId,
+      code: "HQ",
+      name: "Consultorio Principal",
+      address: { street: "Av. Reforma 222", colonia: "Juarez", ciudad: "CDMX", cp: "06600" },
+      phone: "+525512345678",
+    },
+  });
+
+  const branchNorte = await prisma.branch.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000011" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-000000000011",
+      organizationId: orgId,
+      code: "NORTE",
+      name: "Sucursal Norte",
+      address: { street: "Av. Insurgentes 555", colonia: "Polanco", ciudad: "CDMX", cp: "11560" },
+      phone: "+525598765432",
+    },
+  });
+
+  console.log(`Branches: ${branchHQ.name}, ${branchNorte.name}`);
+
+  // Delete old batches without branchId to avoid conflicts
+  const deleted = await prisma.inventoryBatch.deleteMany({ where: { branchId: null } });
+  console.log(`Deleted ${deleted.count} old batches without branch`);
+
   const meds = [
     { sku: "PARAC-500", name: "Paracetamol", presentation: "Tableta 500mg", price: 35, requiresPrescription: false, activeIngredient: "Paracetamol", concentration: "500mg" },
     { sku: "IBU-400", name: "Ibuprofeno", presentation: "Tableta 400mg", price: 45, requiresPrescription: false, activeIngredient: "Ibuprofeno", concentration: "400mg" },
@@ -30,10 +63,11 @@ async function main() {
       create: { organizationId: orgId, ...m, currency: "MXN" },
     });
     medicationIds.push(med.id);
-    console.log(`  Medication: ${m.name}`);
   }
+  console.log(`Medications: ${meds.length}`);
 
-  const batches = [
+  // HQ batches (higher stock)
+  const hqBatches = [
     { medIdx: 0, batchNumber: "LOTE-PARAC-001", expiryDate: new Date("2027-06-01"), stock: 500, cost: 20 },
     { medIdx: 0, batchNumber: "LOTE-PARAC-002", expiryDate: new Date("2027-08-15"), stock: 300, cost: 22 },
     { medIdx: 1, batchNumber: "LOTE-IBU-001", expiryDate: new Date("2027-05-01"), stock: 200, cost: 28 },
@@ -45,16 +79,40 @@ async function main() {
     { medIdx: 7, batchNumber: "LOTE-AZITRO-001", expiryDate: new Date("2027-05-30"), stock: 100, cost: 90 },
   ];
 
-  for (const b of batches) {
-    const batch = await prisma.inventoryBatch.upsert({
-      where: { organizationId_batchNumber_medicationId: { organizationId: orgId, batchNumber: b.batchNumber, medicationId: medicationIds[b.medIdx] } },
-      update: { currentStock: b.stock, costPrice: b.cost, expiryDate: b.expiryDate },
-      create: { organizationId: orgId, medicationId: medicationIds[b.medIdx], batchNumber: b.batchNumber, expiryDate: b.expiryDate, initialStock: b.stock, currentStock: b.stock, costPrice: b.cost },
-    });
-    console.log(`  Batch: ${b.batchNumber} (stock: ${b.stock})`);
-  }
+  // Norte batches (lower stock, some medications missing)
+  const norteBatches = [
+    { medIdx: 0, batchNumber: "LOTE-PARAC-003", expiryDate: new Date("2027-07-01"), stock: 150, cost: 21 },
+    { medIdx: 1, batchNumber: "LOTE-IBU-002", expiryDate: new Date("2027-06-01"), stock: 80, cost: 30 },
+    { medIdx: 2, batchNumber: "LOTE-AMOX-002", expiryDate: new Date("2027-05-01"), stock: 60, cost: 52 },
+    { medIdx: 4, batchNumber: "LOTE-OME-002", expiryDate: new Date("2027-10-01"), stock: 100, cost: 40 },
+    { medIdx: 7, batchNumber: "LOTE-AZITRO-002", expiryDate: new Date("2027-06-30"), stock: 40, cost: 95 },
+  ];
 
-  console.log(`\nDone! ${meds.length} medications, ${batches.length} batches seeded.`);
+  for (const b of hqBatches) {
+    const existing = await prisma.inventoryBatch.findFirst({
+      where: { organizationId: orgId, batchNumber: b.batchNumber, medicationId: medicationIds[b.medIdx], branchId: branchHQ.id },
+    });
+    if (existing) {
+      await prisma.inventoryBatch.update({ where: { id: existing.id }, data: { currentStock: b.stock, costPrice: b.cost, expiryDate: b.expiryDate } });
+    } else {
+      await prisma.inventoryBatch.create({ data: { organizationId: orgId, branchId: branchHQ.id, medicationId: medicationIds[b.medIdx], batchNumber: b.batchNumber, expiryDate: b.expiryDate, initialStock: b.stock, currentStock: b.stock, costPrice: b.cost } });
+    }
+  }
+  console.log(`HQ batches: ${hqBatches.length}`);
+
+  for (const b of norteBatches) {
+    const existing = await prisma.inventoryBatch.findFirst({
+      where: { organizationId: orgId, batchNumber: b.batchNumber, medicationId: medicationIds[b.medIdx], branchId: branchNorte.id },
+    });
+    if (existing) {
+      await prisma.inventoryBatch.update({ where: { id: existing.id }, data: { currentStock: b.stock, costPrice: b.cost, expiryDate: b.expiryDate } });
+    } else {
+      await prisma.inventoryBatch.create({ data: { organizationId: orgId, branchId: branchNorte.id, medicationId: medicationIds[b.medIdx], batchNumber: b.batchNumber, expiryDate: b.expiryDate, initialStock: b.stock, currentStock: b.stock, costPrice: b.cost } });
+    }
+  }
+  console.log(`Norte batches: ${norteBatches.length}`);
+
+  console.log(`\nDone! ${hqBatches.length + norteBatches.length} batches across 2 branches.`);
 }
 
 main()

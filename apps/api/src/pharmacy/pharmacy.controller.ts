@@ -46,8 +46,8 @@ export class PharmacyController {
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
   @Get("batches")
-  async listBatches(@CurrentUser() u: AuthenticatedUser, @Query("medicationId") medicationId?: string) {
-    return this.pharm.listBatches(u.organizationId, medicationId);
+  async listBatches(@CurrentUser() u: AuthenticatedUser, @Query("medicationId") medicationId?: string, @Query("branchId") branchId?: string) {
+    return this.pharm.listBatches(u.organizationId, medicationId, branchId);
   }
 
   @Roles("SUPERADMIN", "ADMIN")
@@ -66,7 +66,7 @@ export class PharmacyController {
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
   @Post("sales")
   async createSale(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateSaleDto) {
-    return this.pharm.createSale(u.organizationId, u.userId, dto);
+    return this.pharm.createSale(u.organizationId, u.userId, u.roles, u.branchId, dto);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")

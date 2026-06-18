@@ -90,6 +90,7 @@ model Branch {
   payments         Payment[]
   sales            Sale[]
   cashRegisters    CashRegister[]
+  inventoryBatches InventoryBatch[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -912,6 +913,7 @@ model Medication {
 model InventoryBatch {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @map("organization_id") @db.Uuid
+  branchId       String?  @map("branch_id") @db.Uuid
   medicationId   String   @map("medication_id") @db.Uuid
   batchNumber    String   @map("batch_number") @db.VarChar(80)
   expiryDate     DateTime @map("expiry_date") @db.Date
@@ -923,13 +925,15 @@ model InventoryBatch {
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
   medication   Medication      @relation(fields: [medicationId], references: [id], onDelete: Cascade)
   movements    StockMovement[]
   saleItems    SaleItem[]
   dispensings  Dispensing[]
 
-  @@unique([organizationId, batchNumber, medicationId])
+  @@unique([organizationId, batchNumber, medicationId, branchId])
   @@index([medicationId])
+  @@index([branchId])
   @@index([expiryDate])
   @@map("inventory_batches")
 }

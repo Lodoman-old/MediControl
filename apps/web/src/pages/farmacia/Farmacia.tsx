@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractErrorMessage } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface Medication {
   id: string; sku: string; barcode: string | null; name: string; presentation: string;
@@ -10,10 +11,15 @@ interface Medication {
   isActive: boolean;
 }
 
+interface Branch {
+  id: string; code: string; name: string;
+}
+
 interface Batch {
   id: string; batchNumber: string; expiryDate: string;
   initialStock: number; currentStock: number; costPrice: number | null;
   medication: { name: string };
+  branch?: { id: string; name: string; code: string } | null;
 }
 
 async function fetchMeds(): Promise<Medication[]> {
@@ -21,9 +27,15 @@ async function fetchMeds(): Promise<Medication[]> {
   return data;
 }
 
-async function fetchBatches(): Promise<Batch[]> {
-  const { data } = await api.get<Batch[]>("/pharmacy/batches");
+async function fetchBatches(branchId?: string): Promise<Batch[]> {
+  const params = branchId ? `?branchId=${branchId}` : "";
+  const { data } = await api.get<Batch[]>(`/pharmacy/batches${params}`);
   return data;
+}
+
+async function fetchBranches(): Promise<Branch[]> {
+  const { data } = await api.get<{ data: Branch[] }>("/admin/branches");
+  return data.data ?? data;
 }
 
 async function createMedication(body: { sku: string; barcode?: string; name: string; presentation: string; price: number; requiresPrescription?: boolean; activeIngredient?: string; concentration?: string }) {
@@ -39,9 +51,13 @@ async function createBatch(body: { medicationId: string; batchNumber: string; ex
 export default function FarmaciaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("ADMIN") || roles.includes("SUPERADMIN");
   const [tab, setTab] = useState<"meds" | "batches">("meds");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+  const [branchId, setBranchId] = useState<string>("");
 
   // New medication form
   const [sku, setSku] = useState("");
@@ -59,8 +75,10 @@ export default function FarmaciaPage() {
   const [expiry, setExpiry] = useState("");
   const [initStock, setInitStock] = useState("");
 
+  const { data: branches } = useQuery({ queryKey: ["branches"], queryFn: fetchBranches });
+
   const { data: meds } = useQuery({ queryKey: ["pharmacy", "medications"], queryFn: fetchMeds });
-  const { data: batches } = useQuery({ queryKey: ["pharmacy", "batches"], queryFn: fetchBatches });
+  const { data: batches } = useQuery({ queryKey: ["pharmacy", "batches", branchId], queryFn: () => fetchBatches(branchId || undefined) });
 
   const createMed = useMutation({
     mutationFn: createMedication,
@@ -86,6 +104,8 @@ export default function FarmaciaPage() {
     createBch.mutate({ medicationId: medId, batchNumber: batchNum, expiryDate: expiry, initialStock: parseInt(initStock) });
   };
 
+  const filteredBatches = branchId ? (batches ?? []) : (batches ?? []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -101,9 +121,15 @@ export default function FarmaciaPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-ink-200 pb-2">
+      <div className="flex flex-wrap items-center gap-3 border-b border-ink-200 pb-2">
         <button onClick={() => { setTab("meds"); setShowForm(false); }} className={`px-3 py-1 text-sm font-medium rounded ${tab === "meds" ? "bg-primary-100 text-primary-700" : "text-ink-500"}`}>Medicamentos</button>
         <button onClick={() => { setTab("batches"); setShowForm(false); }} className={`px-3 py-1 text-sm font-medium rounded ${tab === "batches" ? "bg-primary-100 text-primary-700" : "text-ink-500"}`}>Inventario / Lotes</button>
+        {tab === "batches" && branches && (
+          <select value={branchId} onChange={e => setBranchId(e.target.value)} className="input text-sm py-1 ml-auto max-w-xs">
+            <option value="">Todas las sucursales</option>
+            {(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
       </div>
 
       {error && <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm text-danger-700">{error}</div>}
@@ -168,12 +194,14 @@ export default function FarmaciaPage() {
         <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
-              <th className="px-4 py-3 font-medium">Medicamento</th><th className="px-4 py-3 font-medium">Lote</th>
+              <th className="px-4 py-3 font-medium">Medicamento</th><th className="px-4 py-3 font-medium">Sucursal</th>
+              <th className="px-4 py-3 font-medium">Lote</th>
               <th className="px-4 py-3 font-medium">Caducidad</th><th className="px-4 py-3 font-medium">Stock</th>
               <th className="px-4 py-3 font-medium">Costo</th>
             </tr></thead>
             <tbody>{(batches ?? []).map(b => <tr key={b.id} className="border-t border-ink-100 hover:bg-ink-50">
               <td className="px-4 py-3 font-medium">{b.medication.name}</td>
+              <td className="px-4 py-3 text-xs text-ink-500">{b.branch?.name ?? "General"}</td>
               <td className="px-4 py-3 font-mono text-xs">{b.batchNumber}</td>
               <td className="px-4 py-3">{b.expiryDate?.slice(0, 10)}</td>
               <td className="px-4 py-3"><span className={`font-semibold ${b.currentStock < 10 ? "text-danger-600" : "text-ink-900"}`}>{b.currentStock}</span></td>
