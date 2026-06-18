@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface Doctor {
   id: string;
@@ -91,6 +92,7 @@ function SearchableSelect<T extends { id: string; fullName: string }>({
 
 export default function NewAppointmentPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -100,7 +102,7 @@ export default function NewAppointmentPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [freeBlocks, setFreeBlocks] = useState<AvailableSlot[]>([]);
 
-  const [branchId, setBranchId] = useState("");
+  const [branchId, setBranchId] = useState(user?.branchId ?? "");
   const [doctorId, setDoctorId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [serviceId, setServiceId] = useState("");

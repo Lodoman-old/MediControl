@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, extractErrorMessage } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface Patient {
   id: string;
@@ -46,7 +47,8 @@ const METHODS = [
 
 export default function NewPaymentPage() {
   const navigate = useNavigate();
-  const [branchId, setBranchId] = useState("");
+  const user = useAuthStore((s) => s.user);
+  const [branchId, setBranchId] = useState(user?.branchId ?? "");
   const [patientId, setPatientId] = useState("");
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("CASH");
