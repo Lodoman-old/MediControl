@@ -18,11 +18,11 @@ export class PharmacyService {
   async listMedications(organizationId: string, activeOnly = false) {
     const where: any = { organizationId };
     if (activeOnly) where.isActive = true;
-    return this.prisma.medication.findMany({ where, orderBy: { name: "asc" } });
+    return this.prisma.medication.findMany({ where, orderBy: { name: "asc" }, include: { family: true } });
   }
 
   async getMedication(organizationId: string, id: string) {
-    const m = await this.prisma.medication.findFirst({ where: { id, organizationId } });
+    const m = await this.prisma.medication.findFirst({ where: { id, organizationId }, include: { family: true } });
     if (!m) throw new NotFoundException("Medicamento no encontrado");
     return m;
   }
@@ -30,6 +30,12 @@ export class PharmacyService {
   async updateMedication(organizationId: string, id: string, dto: UpdateMedicationDto) {
     await this.getMedication(organizationId, id);
     return this.prisma.medication.update({ where: { id }, data: dto as any });
+  }
+
+  // --- MEDICATION FAMILIES ---
+
+  async listFamilies(organizationId: string) {
+    return this.prisma.medicationFamily.findMany({ where: { organizationId }, orderBy: { name: "asc" } });
   }
 
   // --- INVENTORY BATCHES ---

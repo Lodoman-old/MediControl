@@ -33,40 +33,41 @@ model Organization {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  branches           Branch[]
-  users              User[]
-  persons            Person[]
-  doctors            Doctor[]
-  patients           Patient[]
-  roles              Role[]
-  featureFlags       FeatureFlag[]
-  refreshTokens      RefreshToken[]
-  accessLogs         AccessLog[]
-  services           Service[]
-  appointments       Appointment[]
-  serviceLocations   ServiceLocation[]
-  schedules          Schedule[]
-  scheduleExceptions ScheduleException[]
-  medicalRecords     MedicalRecord[]
-  clinicalNotes      ClinicalNote[]
-  vitalSigns         VitalSign[]
-  diagnoses          Diagnosis[]
-  treatments         Treatment[]
-  informedConsents   InformedConsent[]
-  labOrders          LabOrder[]
-  labProviders       LabProvider[]
-  prescriptions      Prescription[]
-  payments           Payment[]
-  medications        Medication[]
-  inventoryBatches   InventoryBatch[]
-  stockMovements     StockMovement[]
-  sales              Sale[]
-  dispensings        Dispensing[]
-  reportSchedules    ReportSchedule[]
-  notifications      Notification[]
+  branches              Branch[]
+  users                 User[]
+  persons               Person[]
+  doctors               Doctor[]
+  patients              Patient[]
+  roles                 Role[]
+  featureFlags          FeatureFlag[]
+  refreshTokens         RefreshToken[]
+  accessLogs            AccessLog[]
+  services              Service[]
+  appointments          Appointment[]
+  serviceLocations      ServiceLocation[]
+  schedules             Schedule[]
+  scheduleExceptions    ScheduleException[]
+  medicalRecords        MedicalRecord[]
+  clinicalNotes         ClinicalNote[]
+  vitalSigns            VitalSign[]
+  diagnoses             Diagnosis[]
+  treatments            Treatment[]
+  informedConsents      InformedConsent[]
+  labOrders             LabOrder[]
+  labProviders          LabProvider[]
+  prescriptions         Prescription[]
+  payments              Payment[]
+  medications           Medication[]
+  medicationFamilies    MedicationFamily[]
+  inventoryBatches      InventoryBatch[]
+  stockMovements        StockMovement[]
+  sales                 Sale[]
+  dispensings           Dispensing[]
+  reportSchedules       ReportSchedule[]
+  notifications         Notification[]
   notificationTemplates NotificationTemplate[]
-  notificationLogs   NotificationLog[]
-  cashRegisters      CashRegister[]
+  notificationLogs      NotificationLog[]
+  cashRegisters         CashRegister[]
 
   @@map("organizations")
 }
@@ -156,24 +157,24 @@ model User {
   createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  person        Person?        @relation(fields: [personId], references: [id])
-  userRoles     UserRole[]
-  refreshTokens RefreshToken[]
-  accessLogs    AccessLog[]
-  doctor        Doctor?
-  clinicalNotes ClinicalNote[]
-  diagnoses     Diagnosis[]
-  treatments    Treatment[]
-  witnessedConsents InformedConsent[] @relation("witnessedConsents")
-  labOrders     LabOrder[]
-  labResults    LabResult[]
-  patient       Patient?
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  person              Person?              @relation(fields: [personId], references: [id])
+  userRoles           UserRole[]
+  refreshTokens       RefreshToken[]
+  accessLogs          AccessLog[]
+  doctor              Doctor?
+  clinicalNotes       ClinicalNote[]
+  diagnoses           Diagnosis[]
+  treatments          Treatment[]
+  witnessedConsents   InformedConsent[]    @relation("witnessedConsents")
+  labOrders           LabOrder[]
+  labResults          LabResult[]
+  patient             Patient?
   notifications       Notification[]
   passwordResetTokens PasswordResetToken[]
   sales               Sale[]
-  cashRegistersOpened CashRegister[]    @relation("openedBy")
-  cashRegistersClosed CashRegister[]    @relation("closedBy")
+  cashRegistersOpened CashRegister[]       @relation("openedBy")
+  cashRegistersClosed CashRegister[]       @relation("closedBy")
   cashMovements       CashMovement[]
 
   @@unique([organizationId, email])
@@ -419,11 +420,11 @@ model Patient {
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  person       Person            @relation(fields: [personId], references: [id], onDelete: Restrict)
-  appointments Appointment[]
-  medicalRecord MedicalRecord?
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  person         Person            @relation(fields: [personId], references: [id], onDelete: Restrict)
+  appointments   Appointment[]
+  medicalRecord  MedicalRecord?
   signedConsents InformedConsent[]
   prescriptions  Prescription[]
   payments       Payment[]
@@ -677,19 +678,19 @@ enum LabOrderStatus {
 }
 
 model MedicalRecord {
-  id                       String    @id @default(uuid()) @db.Uuid
-  organizationId           String    @map("organization_id") @db.Uuid
-  patientId                String    @unique @map("patient_id") @db.Uuid
-  familyHistory            String?   @map("family_history") @db.Text
-  nonPathologicalHistory   String?   @map("non_pathological_history") @db.Text
-  pathologicalHistory      String?   @map("pathological_history") @db.Text
-  currentIllness           String?   @map("current_illness") @db.Text
-  systemsReview            String?   @map("systems_review") @db.Text
-  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                     String   @id @default(uuid()) @db.Uuid
+  organizationId         String   @map("organization_id") @db.Uuid
+  patientId              String   @unique @map("patient_id") @db.Uuid
+  familyHistory          String?  @map("family_history") @db.Text
+  nonPathologicalHistory String?  @map("non_pathological_history") @db.Text
+  pathologicalHistory    String?  @map("pathological_history") @db.Text
+  currentIllness         String?  @map("current_illness") @db.Text
+  systemsReview          String?  @map("systems_review") @db.Text
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient       Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
   clinicalNotes ClinicalNote[]
   diagnoses     Diagnosis[]
   treatments    Treatment[]
@@ -702,18 +703,18 @@ model MedicalRecord {
 }
 
 model ClinicalNote {
-  id              String    @id @default(uuid()) @db.Uuid
-  organizationId  String    @map("organization_id") @db.Uuid
-  medicalRecordId String    @map("medical_record_id") @db.Uuid
-  appointmentId   String?   @map("appointment_id") @db.Uuid
-  noteDate        DateTime  @map("note_date") @db.Timestamptz
-  subjective      String?   @db.Text
-  objective       String?   @db.Text
-  assessment      String?   @db.Text
-  plan            String?   @db.Text
-  createdById     String    @map("created_by_id") @db.Uuid
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  medicalRecordId String   @map("medical_record_id") @db.Uuid
+  appointmentId   String?  @map("appointment_id") @db.Uuid
+  noteDate        DateTime @map("note_date") @db.Timestamptz
+  subjective      String?  @db.Text
+  objective       String?  @db.Text
+  assessment      String?  @db.Text
+  plan            String?  @db.Text
+  createdById     String   @map("created_by_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
@@ -728,25 +729,25 @@ model ClinicalNote {
 }
 
 model VitalSign {
-  id                   String   @id @default(uuid()) @db.Uuid
-  organizationId       String   @map("organization_id") @db.Uuid
-  clinicalNoteId       String?   @map("clinical_note_id") @db.Uuid
-  appointmentId        String?   @map("appointment_id") @db.Uuid
-  bloodPressureSystolic Int?    @map("bp_systolic") @db.SmallInt
-  bloodPressureDiastolic Int?   @map("bp_diastolic") @db.SmallInt
-  heartRate             Int?    @map("heart_rate") @db.SmallInt
-  respiratoryRate       Int?    @map("respiratory_rate") @db.SmallInt
-  temperature           Decimal? @db.Decimal(4, 1)
-  oxygenSaturation      Int?    @map("oxygen_saturation") @db.SmallInt
-  weight                Decimal? @db.Decimal(5, 2)
-  height                Decimal? @db.Decimal(5, 2)
-  glucose               Int?    @db.SmallInt
-  notes                 String? @db.Text
-  measuredAt            DateTime @default(now()) @map("measured_at") @db.Timestamptz
+  id                     String   @id @default(uuid()) @db.Uuid
+  organizationId         String   @map("organization_id") @db.Uuid
+  clinicalNoteId         String?  @map("clinical_note_id") @db.Uuid
+  appointmentId          String?  @map("appointment_id") @db.Uuid
+  bloodPressureSystolic  Int?     @map("bp_systolic") @db.SmallInt
+  bloodPressureDiastolic Int?     @map("bp_diastolic") @db.SmallInt
+  heartRate              Int?     @map("heart_rate") @db.SmallInt
+  respiratoryRate        Int?     @map("respiratory_rate") @db.SmallInt
+  temperature            Decimal? @db.Decimal(4, 1)
+  oxygenSaturation       Int?     @map("oxygen_saturation") @db.SmallInt
+  weight                 Decimal? @db.Decimal(5, 2)
+  height                 Decimal? @db.Decimal(5, 2)
+  glucose                Int?     @db.SmallInt
+  notes                  String?  @db.Text
+  measuredAt             DateTime @default(now()) @map("measured_at") @db.Timestamptz
 
-  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicalNote  ClinicalNote?  @relation(fields: [clinicalNoteId], references: [id], onDelete: Cascade)
-  appointment   Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicalNote ClinicalNote? @relation(fields: [clinicalNoteId], references: [id], onDelete: Cascade)
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   @@index([clinicalNoteId])
   @@index([appointmentId])
@@ -802,17 +803,17 @@ model Treatment {
 }
 
 model InformedConsent {
-  id              String      @id @default(uuid()) @db.Uuid
-  organizationId  String      @map("organization_id") @db.Uuid
-  medicalRecordId String      @map("medical_record_id") @db.Uuid
-  consentType     ConsentType @map("consent_type")
-  description     String      @db.Text
-  signedAt        DateTime?   @map("signed_at") @db.Timestamptz
-  signedByPatientId String?   @map("signed_by_patient_id") @db.Uuid
-  witnessedById   String?     @map("witnessed_by_id") @db.Uuid
-  documentUrl     String?     @map("document_url") @db.Text
-  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+  id                String      @id @default(uuid()) @db.Uuid
+  organizationId    String      @map("organization_id") @db.Uuid
+  medicalRecordId   String      @map("medical_record_id") @db.Uuid
+  consentType       ConsentType @map("consent_type")
+  description       String      @db.Text
+  signedAt          DateTime?   @map("signed_at") @db.Timestamptz
+  signedByPatientId String?     @map("signed_by_patient_id") @db.Uuid
+  witnessedById     String?     @map("witnessed_by_id") @db.Uuid
+  documentUrl       String?     @map("document_url") @db.Text
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
   organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
@@ -845,30 +846,30 @@ enum SaleStatus {
 }
 
 model Prescription {
-  id              String              @id @default(uuid()) @db.Uuid
-  organizationId  String              @map("organization_id") @db.Uuid
-  medicalRecordId String?             @map("medical_record_id") @db.Uuid
-  patientId       String              @map("patient_id") @db.Uuid
-  doctorId        String              @map("doctor_id") @db.Uuid
-  medication      String              @db.VarChar(255)
-  dosage          String              @db.VarChar(100)
-  frequency       String              @db.VarChar(100)
-  duration        String?             @db.VarChar(100)
-  route           String?             @default("ORAL") @db.VarChar(50)
-  quantity        Int?
-  refills         Int?                @default(0)
-  indications     String?             @db.Text
-  notes           String?             @db.Text
-  status          PrescriptionStatus  @default(ACTIVE)
+  id               String             @id @default(uuid()) @db.Uuid
+  organizationId   String             @map("organization_id") @db.Uuid
+  medicalRecordId  String?            @map("medical_record_id") @db.Uuid
+  patientId        String             @map("patient_id") @db.Uuid
+  doctorId         String             @map("doctor_id") @db.Uuid
+  medication       String             @db.VarChar(255)
+  dosage           String             @db.VarChar(100)
+  frequency        String             @db.VarChar(100)
+  duration         String?            @db.VarChar(100)
+  route            String?            @default("ORAL") @db.VarChar(50)
+  quantity         Int?
+  refills          Int?               @default(0)
+  indications      String?            @db.Text
+  notes            String?            @db.Text
+  status           PrescriptionStatus @default(ACTIVE)
   digitalSignature String?            @map("digital_signature") @db.Text
-  prescribedAt    DateTime            @default(now()) @map("prescribed_at") @db.Timestamptz
-  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  prescribedAt     DateTime           @default(now()) @map("prescribed_at") @db.Timestamptz
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   medicalRecord MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: SetNull)
-  patient       Patient       @relation(fields: [patientId], references: [id])
-  doctor        Doctor        @relation(fields: [doctorId], references: [id])
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  doctor        Doctor         @relation(fields: [doctorId], references: [id])
   dispensings   Dispensing[]
 
   @@index([medicalRecordId])
@@ -882,9 +883,26 @@ model Prescription {
 // FARMACIA - INVENTARIO Y POS (Sprint 5)
 // ============================================================================
 
+model MedicationFamily {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  medications  Medication[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("medication_families")
+}
+
 model Medication {
   id                   String   @id @default(uuid()) @db.Uuid
   organizationId       String   @map("organization_id") @db.Uuid
+  familyId             String?  @map("family_id") @db.Uuid
   sku                  String   @db.VarChar(40)
   barcode              String?  @db.VarChar(30)
   name                 String   @db.VarChar(255)
@@ -899,13 +917,15 @@ model Medication {
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family       MedicationFamily? @relation(fields: [familyId], references: [id], onDelete: SetNull)
   batches      InventoryBatch[]
   saleItems    SaleItem[]
   dispensings  Dispensing[]
 
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
+  @@index([familyId])
   @@index([organizationId])
   @@map("medications")
 }
@@ -951,7 +971,7 @@ model StockMovement {
   createdByUserId String       @map("created_by_user_id") @db.Uuid
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   batch        InventoryBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
   @@index([batchId])
@@ -960,20 +980,20 @@ model StockMovement {
 }
 
 model Sale {
-  id               String      @id @default(uuid()) @db.Uuid
-  organizationId   String      @map("organization_id") @db.Uuid
-  branchId         String      @map("branch_id") @db.Uuid
-  patientId        String?     @map("patient_id") @db.Uuid
-  status           SaleStatus  @default(COMPLETED)
-  subtotal         Decimal     @db.Decimal(12, 2)
-  tax              Decimal     @default(0) @db.Decimal(12, 2)
-  total            Decimal     @db.Decimal(12, 2)
+  id               String        @id @default(uuid()) @db.Uuid
+  organizationId   String        @map("organization_id") @db.Uuid
+  branchId         String        @map("branch_id") @db.Uuid
+  patientId        String?       @map("patient_id") @db.Uuid
+  status           SaleStatus    @default(COMPLETED)
+  subtotal         Decimal       @db.Decimal(12, 2)
+  tax              Decimal       @default(0) @db.Decimal(12, 2)
+  total            Decimal       @db.Decimal(12, 2)
   method           PaymentMethod
-  paymentReference String?     @map("payment_reference") @db.VarChar(120)
-  notes            String?     @db.Text
-  createdByUserId  String      @map("created_by_user_id") @db.Uuid
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+  paymentReference String?       @map("payment_reference") @db.VarChar(120)
+  notes            String?       @db.Text
+  createdByUserId  String        @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
@@ -992,24 +1012,24 @@ enum CashRegisterStatus {
 }
 
 model CashRegister {
-  id              String             @id @default(uuid()) @db.Uuid
-  organizationId  String             @map("organization_id") @db.Uuid
-  branchId        String             @map("branch_id") @db.Uuid
-  openedAt        DateTime           @default(now()) @map("opened_at") @db.Timestamptz
-  closedAt        DateTime?          @map("closed_at") @db.Timestamptz
-  initialAmount   Decimal            @default(0) @map("initial_amount") @db.Decimal(12, 2)
-  expectedAmount  Decimal?           @map("expected_amount") @db.Decimal(12, 2)
-  actualAmount    Decimal?           @map("actual_amount") @db.Decimal(12, 2)
-  difference      Decimal?           @db.Decimal(12, 2)
-  status          CashRegisterStatus @default(OPEN)
-  notes           String?            @db.Text
-  openedByUserId  String             @map("opened_by_user_id") @db.Uuid
-  closedByUserId  String?            @map("closed_by_user_id") @db.Uuid
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  branchId       String             @map("branch_id") @db.Uuid
+  openedAt       DateTime           @default(now()) @map("opened_at") @db.Timestamptz
+  closedAt       DateTime?          @map("closed_at") @db.Timestamptz
+  initialAmount  Decimal            @default(0) @map("initial_amount") @db.Decimal(12, 2)
+  expectedAmount Decimal?           @map("expected_amount") @db.Decimal(12, 2)
+  actualAmount   Decimal?           @map("actual_amount") @db.Decimal(12, 2)
+  difference     Decimal?           @db.Decimal(12, 2)
+  status         CashRegisterStatus @default(OPEN)
+  notes          String?            @db.Text
+  openedByUserId String             @map("opened_by_user_id") @db.Uuid
+  closedByUserId String?            @map("closed_by_user_id") @db.Uuid
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  openedBy     User         @relation("openedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
-  closedBy     User?        @relation("closedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  openedBy     User           @relation("openedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
+  closedBy     User?          @relation("closedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
   movements    CashMovement[]
 
   @@index([organizationId, branchId, status])
@@ -1018,14 +1038,14 @@ model CashRegister {
 }
 
 model CashMovement {
-  id              String   @id @default(uuid()) @db.Uuid
-  cashRegisterId  String   @map("cash_register_id") @db.Uuid
+  id              String       @id @default(uuid()) @db.Uuid
+  cashRegisterId  String       @map("cash_register_id") @db.Uuid
   type            MovementType
-  amount          Decimal  @db.Decimal(12, 2)
-  reason          String?  @db.VarChar(255)
-  referenceId     String?  @map("reference_id") @db.VarChar(80)
-  createdByUserId String   @map("created_by_user_id") @db.Uuid
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  amount          Decimal      @db.Decimal(12, 2)
+  reason          String?      @db.VarChar(255)
+  referenceId     String?      @map("reference_id") @db.VarChar(80)
+  createdByUserId String       @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
   cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
   createdBy    User         @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
@@ -1036,14 +1056,14 @@ model CashMovement {
 }
 
 model SaleItem {
-  id           String   @id @default(uuid()) @db.Uuid
-  saleId       String   @map("sale_id") @db.Uuid
-  medicationId String   @map("medication_id") @db.Uuid
-  batchId      String?  @map("batch_id") @db.Uuid
+  id           String  @id @default(uuid()) @db.Uuid
+  saleId       String  @map("sale_id") @db.Uuid
+  medicationId String  @map("medication_id") @db.Uuid
+  batchId      String? @map("batch_id") @db.Uuid
   quantity     Int
-  unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
-  totalPrice   Decimal  @map("total_price") @db.Decimal(12, 2)
-  dispensingId String?  @unique @map("dispensing_id") @db.Uuid
+  unitPrice    Decimal @map("unit_price") @db.Decimal(12, 2)
+  totalPrice   Decimal @map("total_price") @db.Decimal(12, 2)
+  dispensingId String? @unique @map("dispensing_id") @db.Uuid
 
   sale       Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
   medication Medication      @relation(fields: [medicationId], references: [id], onDelete: Restrict)
@@ -1055,19 +1075,19 @@ model SaleItem {
 }
 
 model Dispensing {
-  id               String   @id @default(uuid()) @db.Uuid
-  organizationId   String   @map("organization_id") @db.Uuid
-  prescriptionId   String?  @map("prescription_id") @db.Uuid
-  medicationId     String   @map("medication_id") @db.Uuid
-  batchId          String   @map("batch_id") @db.Uuid
-  quantity         Int
-  instructions     String?  @db.Text
-  dispensedByUserId String  @map("dispensed_by_user_id") @db.Uuid
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  prescriptionId    String?  @map("prescription_id") @db.Uuid
+  medicationId      String   @map("medication_id") @db.Uuid
+  batchId           String   @map("batch_id") @db.Uuid
+  quantity          Int
+  instructions      String?  @db.Text
+  dispensedByUserId String   @map("dispensed_by_user_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  prescription Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
-  medication   Medication    @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  prescription Prescription?  @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
+  medication   Medication     @relation(fields: [medicationId], references: [id], onDelete: Restrict)
   batch        InventoryBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
   saleItem     SaleItem?
 
@@ -1113,20 +1133,20 @@ enum NotificationStatus {
 }
 
 model Notification {
-  id             String               @id @default(uuid()) @db.Uuid
-  organizationId String               @map("organization_id") @db.Uuid
-  userId         String               @map("user_id") @db.Uuid
-  channel        NotificationChannel  @default(IN_APP)
-  type           String               @db.VarChar(50)
-  title          String               @db.VarChar(255)
-  message        String               @db.Text
-  referenceType  String?              @map("reference_type") @db.VarChar(40)
-  referenceId    String?              @map("reference_id") @db.VarChar(64)
-  status         NotificationStatus   @default(PENDING)
-  sentAt         DateTime?            @map("sent_at") @db.Timestamptz
-  readAt         DateTime?            @map("read_at") @db.Timestamptz
-  errorMessage   String?              @map("error_message") @db.Text
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  channel        NotificationChannel @default(IN_APP)
+  type           String              @db.VarChar(50)
+  title          String              @db.VarChar(255)
+  message        String              @db.Text
+  referenceType  String?             @map("reference_type") @db.VarChar(40)
+  referenceId    String?             @map("reference_id") @db.VarChar(64)
+  status         NotificationStatus  @default(PENDING)
+  sentAt         DateTime?           @map("sent_at") @db.Timestamptz
+  readAt         DateTime?           @map("read_at") @db.Timestamptz
+  errorMessage   String?             @map("error_message") @db.Text
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1138,18 +1158,18 @@ model Notification {
 }
 
 model NotificationTemplate {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
-  code           String   @db.VarChar(80)
-  name           String   @db.VarChar(120)
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  code           String              @db.VarChar(80)
+  name           String              @db.VarChar(120)
   channel        NotificationChannel
-  type           String   @db.VarChar(50)
-  subject        String?  @db.VarChar(255)
-  content        String   @db.Text
-  variables      Json     @default("[]") @db.JsonB
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  type           String              @db.VarChar(50)
+  subject        String?             @db.VarChar(255)
+  content        String              @db.Text
+  variables      Json                @default("[]") @db.JsonB
+  isActive       Boolean             @default(true) @map("is_active")
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1159,17 +1179,17 @@ model NotificationTemplate {
 }
 
 model NotificationLog {
-  id             String             @id @default(uuid()) @db.Uuid
-  organizationId String             @map("organization_id") @db.Uuid
-  notificationId String?            @map("notification_id") @db.Uuid
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  notificationId String?             @map("notification_id") @db.Uuid
   channel        NotificationChannel
-  recipient      String             @db.VarChar(255)
-  subject        String?            @db.VarChar(255)
-  body           String?            @db.Text
-  status         NotificationStatus @default(PENDING)
-  errorMessage   String?            @map("error_message") @db.Text
-  sentAt         DateTime?          @map("sent_at") @db.Timestamptz
-  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  recipient      String              @db.VarChar(255)
+  subject        String?             @db.VarChar(255)
+  body           String?             @db.Text
+  status         NotificationStatus  @default(PENDING)
+  errorMessage   String?             @map("error_message") @db.Text
+  sentAt         DateTime?           @map("sent_at") @db.Timestamptz
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1179,17 +1199,17 @@ model NotificationLog {
 }
 
 model LabProvider {
-  id              String   @id @default(uuid()) @db.Uuid
-  organizationId  String   @map("organization_id") @db.Uuid
-  providerCode    String   @map("provider_code") @db.VarChar(40)
-  providerName    String   @map("provider_name") @db.VarChar(120)
-  apiEndpoint     String   @map("api_endpoint") @db.Text
-  apiKeyEnc       String?  @map("api_key_enc") @db.Text
-  config          Json?    @default("{}") @db.JsonB
-  isActive        Boolean  @default(false) @map("is_active")
-  lastSyncAt      DateTime? @map("last_sync_at") @db.Timestamptz
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  providerCode   String    @map("provider_code") @db.VarChar(40)
+  providerName   String    @map("provider_name") @db.VarChar(120)
+  apiEndpoint    String    @map("api_endpoint") @db.Text
+  apiKeyEnc      String?   @map("api_key_enc") @db.Text
+  config         Json?     @default("{}") @db.JsonB
+  isActive       Boolean   @default(false) @map("is_active")
+  lastSyncAt     DateTime? @map("last_sync_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1199,17 +1219,17 @@ model LabProvider {
 }
 
 model LabOrder {
-  id              String        @id @default(uuid()) @db.Uuid
-  organizationId  String        @map("organization_id") @db.Uuid
-  medicalRecordId String        @map("medical_record_id") @db.Uuid
-  studyType       StudyType     @map("study_type")
-  studyName       String        @map("study_name") @db.VarChar(200)
-  indication      String?       @db.Text
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  medicalRecordId String         @map("medical_record_id") @db.Uuid
+  studyType       StudyType      @map("study_type")
+  studyName       String         @map("study_name") @db.VarChar(200)
+  indication      String?        @db.Text
   status          LabOrderStatus @default(PENDING)
-  orderedById     String        @map("ordered_by_id") @db.Uuid
-  orderedAt       DateTime      @default(now()) @map("ordered_at") @db.Timestamptz
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  orderedById     String         @map("ordered_by_id") @db.Uuid
+  orderedAt       DateTime       @default(now()) @map("ordered_at") @db.Timestamptz
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
   organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
@@ -1222,14 +1242,14 @@ model LabOrder {
 }
 
 model LabResult {
-  id            String   @id @default(uuid()) @db.Uuid
-  labOrderId    String   @map("lab_order_id") @db.Uuid
-  resultDate    DateTime @default(now()) @map("result_date") @db.Timestamptz
-  resultText    String?  @map("result_text") @db.Text
-  resultFileUrl String?  @map("result_file_url") @db.Text
-  interpretedById String? @map("interpreted_by_id") @db.Uuid
-  notes         String?  @db.Text
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id              String   @id @default(uuid()) @db.Uuid
+  labOrderId      String   @map("lab_order_id") @db.Uuid
+  resultDate      DateTime @default(now()) @map("result_date") @db.Timestamptz
+  resultText      String?  @map("result_text") @db.Text
+  resultFileUrl   String?  @map("result_file_url") @db.Text
+  interpretedById String?  @map("interpreted_by_id") @db.Uuid
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   labOrder      LabOrder @relation(fields: [labOrderId], references: [id], onDelete: Cascade)
   interpretedBy User?    @relation(fields: [interpretedById], references: [id])

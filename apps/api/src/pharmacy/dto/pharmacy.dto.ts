@@ -13,6 +13,7 @@ export class CreateMedicationDto {
   @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() requiresPrescription?: boolean;
   @ApiProperty() @IsNumber() price!: number;
   @ApiPropertyOptional({ default: "MXN" }) @IsOptional() @IsString() currency?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() familyId?: string;
 }
 
 export class UpdateMedicationDto {
@@ -25,6 +26,7 @@ export class UpdateMedicationDto {
   @ApiPropertyOptional() @IsOptional() @IsBoolean() requiresPrescription?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsNumber() price?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsString() familyId?: string;
 }
 
 export class CreateBatchDto {

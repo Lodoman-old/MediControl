@@ -37,6 +37,13 @@ export class PharmacyController {
     return this.pharm.updateMedication(u.organizationId, id, dto);
   }
 
+  // --- MEDICATION FAMILIES ---
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
+  @Get("families")
+  async listFamilies(@CurrentUser() u: AuthenticatedUser) {
+    return this.pharm.listFamilies(u.organizationId);
+  }
+
   // --- INVENTORY ---
   @Roles("SUPERADMIN", "ADMIN")
   @Post("batches")

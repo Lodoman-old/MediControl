@@ -9,10 +9,15 @@ interface Medication {
   activeIngredient: string | null; concentration: string | null;
   requiresPrescription: boolean; price: number; currency: string;
   isActive: boolean;
+  family?: { id: string; name: string } | null;
 }
 
 interface Branch {
   id: string; code: string; name: string;
+}
+
+interface Family {
+  id: string; name: string;
 }
 
 interface Batch {
@@ -38,6 +43,11 @@ async function fetchBranches(): Promise<Branch[]> {
   return data.data ?? data;
 }
 
+async function fetchFamilies(): Promise<Family[]> {
+  const { data } = await api.get<Family[]>("/pharmacy/families");
+  return data;
+}
+
 async function createMedication(body: { sku: string; barcode?: string; name: string; presentation: string; price: number; requiresPrescription?: boolean; activeIngredient?: string; concentration?: string }) {
   const { data } = await api.post("/pharmacy/medications", body);
   return data;
@@ -58,6 +68,7 @@ export default function FarmaciaPage() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
   const [branchId, setBranchId] = useState<string>(user?.branchId ?? "");
+  const [familyFilter, setFamilyFilter] = useState("");
 
   // New medication form
   const [sku, setSku] = useState("");
@@ -68,6 +79,7 @@ export default function FarmaciaPage() {
   const [ingredient, setIngredient] = useState("");
   const [conc, setConc] = useState("");
   const [reqRx, setReqRx] = useState(false);
+  const [familyId, setFamilyId] = useState("");
 
   // New batch form
   const [medId, setMedId] = useState("");
@@ -78,7 +90,12 @@ export default function FarmaciaPage() {
   const { data: branches } = useQuery({ queryKey: ["branches"], queryFn: fetchBranches });
 
   const { data: meds } = useQuery({ queryKey: ["pharmacy", "medications"], queryFn: fetchMeds });
+  const { data: families } = useQuery({ queryKey: ["pharmacy", "families"], queryFn: fetchFamilies });
   const { data: batches } = useQuery({ queryKey: ["pharmacy", "batches", branchId], queryFn: () => fetchBatches(branchId || undefined) });
+
+  const filteredMeds = (meds ?? []).filter(m =>
+    !familyFilter || m.family?.id === familyFilter
+  );
 
   const createMed = useMutation({
     mutationFn: createMedication,
@@ -92,11 +109,11 @@ export default function FarmaciaPage() {
     onError: (e) => setError(extractErrorMessage(e)),
   });
 
-  const resetForm = () => { setSku(""); setBarcode(""); setName(""); setPres(""); setPrice(""); setIngredient(""); setConc(""); setReqRx(false); setMedId(""); setBatchNum(""); setExpiry(""); setInitStock(""); setError(""); };
+  const resetForm = () => { setSku(""); setBarcode(""); setName(""); setPres(""); setPrice(""); setIngredient(""); setConc(""); setReqRx(false); setFamilyId(""); setMedId(""); setBatchNum(""); setExpiry(""); setInitStock(""); setError(""); };
 
   const handleMedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMed.mutate({ sku, barcode: barcode || undefined, name, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined });
+    createMed.mutate({ sku, barcode: barcode || undefined, name, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined } as any);
   };
 
   const handleBatchSubmit = (e: React.FormEvent) => {
@@ -124,6 +141,12 @@ export default function FarmaciaPage() {
       <div className="flex flex-wrap items-center gap-3 border-b border-ink-200 pb-2">
         <button onClick={() => { setTab("meds"); setShowForm(false); }} className={`px-3 py-1 text-sm font-medium rounded ${tab === "meds" ? "bg-primary-100 text-primary-700" : "text-ink-500"}`}>Medicamentos</button>
         <button onClick={() => { setTab("batches"); setShowForm(false); }} className={`px-3 py-1 text-sm font-medium rounded ${tab === "batches" ? "bg-primary-100 text-primary-700" : "text-ink-500"}`}>Inventario / Lotes</button>
+        {tab === "meds" && families && (
+          <select value={familyFilter} onChange={e => setFamilyFilter(e.target.value)} className="input text-sm py-1 ml-auto max-w-xs">
+            <option value="">Todas las familias</option>
+            {(families ?? []).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+        )}
         {tab === "batches" && branches && (
           <select value={branchId} onChange={e => setBranchId(e.target.value)} className="input text-sm py-1 ml-auto max-w-xs">
             <option value="">Todas las sucursales</option>
@@ -148,6 +171,12 @@ export default function FarmaciaPage() {
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Ingrediente activo</label><input value={ingredient} onChange={e => setIngredient(e.target.value)} className="input" /></div>
             <div><label className="label">Concentracion</label><input value={conc} onChange={e => setConc(e.target.value)} className="input" placeholder="500mg" /></div>
+          </div>
+          <div><label className="label">Familia</label>
+            <select value={familyId} onChange={e => setFamilyId(e.target.value)} className="input">
+              <option value="">Sin familia</option>
+              {(families ?? []).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reqRx} onChange={e => setReqRx(e.target.checked)} className="rounded" /> Requiere receta</label>
           <button type="submit" disabled={createMed.isPending} className="btn-primary">{createMed.isPending ? "Guardando..." : "Guardar medicamento"}</button>
@@ -175,13 +204,14 @@ export default function FarmaciaPage() {
           <table className="w-full text-sm">
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
               <th className="px-4 py-3 font-medium">Codigo barras</th><th className="px-4 py-3 font-medium">SKU</th><th className="px-4 py-3 font-medium">Nombre</th>
-              <th className="px-4 py-3 font-medium">Presentacion</th><th className="px-4 py-3 font-medium">Precio</th>
+              <th className="px-4 py-3 font-medium">Familia</th><th className="px-4 py-3 font-medium">Presentacion</th><th className="px-4 py-3 font-medium">Precio</th>
               <th className="px-4 py-3 font-medium">Rx</th>
             </tr></thead>
-            <tbody>{(meds ?? []).map(m => <tr key={m.id} className="border-t border-ink-100 hover:bg-ink-50">
+            <tbody>{filteredMeds.map(m => <tr key={m.id} className="border-t border-ink-100 hover:bg-ink-50">
               <td className="px-4 py-3 font-mono text-xs text-ink-500">{m.barcode ?? "—"}</td>
               <td className="px-4 py-3 font-mono text-xs">{m.sku}</td>
               <td className="px-4 py-3 font-medium">{m.name}</td>
+              <td className="px-4 py-3 text-xs text-ink-500">{m.family?.name ?? "—"}</td>
               <td className="px-4 py-3 text-ink-600">{m.presentation}</td>
               <td className="px-4 py-3 font-mono">${Number(m.price).toLocaleString("es-MX")}</td>
               <td className="px-4 py-3">{m.requiresPrescription ? <span className="badge bg-yellow-100 text-yellow-700">Receta</span> : <span className="text-ink-400">Libre</span>}</td>
