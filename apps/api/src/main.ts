@@ -18,14 +18,11 @@ async function bootstrap() {
 
   initSentry(configService);
 
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-  app.use(cookieParser());
   app.enableCors({
     origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
       const allowed = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["http://localhost:5173"];
-      // Allow requests from Capacitor APK (null/file://), local dev servers, and configured origins
       if (
-        !origin ||
         allowed.includes(origin) ||
         origin === "null" ||
         origin.startsWith("capacitor://") ||
@@ -40,6 +37,8 @@ async function bootstrap() {
     },
     credentials: true,
   });
+  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, crossOriginOpenerPolicy: false, crossOriginResourcePolicy: false }));
+  app.use(cookieParser());
 
   app.setGlobalPrefix("api/v1");
 

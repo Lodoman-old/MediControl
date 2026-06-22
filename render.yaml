@@ -25,7 +25,7 @@ services:
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_DOMAIN
-        value: medicontrol-api.onrender.com
+        value: medicontrol-api-h9x3.onrender.com
       - key: PORTAL_URL
         value: https://medicontrol-web.onrender.com
       - key: FEATURE_MERCADOPAGO_ENABLED
@@ -52,4 +52,4 @@ services:
         value: DENY
     envVars:
       - key: VITE_API_URL
-        value: https://medicontrol-api.onrender.com/api/v1
+        value: https://medicontrol-api-h9x3.onrender.com/api/v1

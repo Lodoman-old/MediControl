@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import isopoImg from "/isopo.png";
 
 type Variant = "horizontal" | "isopo";
 
@@ -14,7 +15,7 @@ export default function Logo({
   alt = "MediControl",
 }: LogoProps) {
   const src =
-    variant === "isopo" ? "isopo.png" : "logo-horizontal.png";
+    variant === "isopo" ? isopoImg : "/logo-horizontal.png";
 
   return (
     <img

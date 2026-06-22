@@ -9,7 +9,7 @@ import { Capacitor } from "@capacitor/core";
 const API_BASE_URL =
   (import.meta.env["VITE_API_URL"] as string | undefined) ??
   (Capacitor.isNativePlatform()
-    ? "https://medicontrol-api.onrender.com/api/v1"
+    ? "https://medicontrol-api-h9x3.onrender.com/api/v1"
     : "/api/v1");
 
 export interface ApiErrorBody {
