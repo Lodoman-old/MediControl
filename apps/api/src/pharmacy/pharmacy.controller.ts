@@ -132,10 +132,4 @@ export class PharmacyController {
   async dispense(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateDispensingDto) {
     return this.pharm.dispenseFromPrescription(u.organizationId, u.userId, dto);
   }
-
-  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
-  @Get("dispensings")
-  async listDispensings(@CurrentUser() u: AuthenticatedUser, @Query("prescriptionId") prescriptionId?: string) {
-    return this.pharm.listDispensings(u.organizationId, prescriptionId);
-  }
 }
