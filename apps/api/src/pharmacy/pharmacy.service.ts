@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import type { CreateMedicationDto, UpdateMedicationDto, CreateBatchDto, CreateStockMovementDto, CreateSaleDto, CreateDispensingDto } from "./dto/pharmacy.dto";
+import type { CreateMedicationDto, UpdateMedicationDto, CreateBatchDto, CreateStockMovementDto, CreateSaleDto, CreateDispensingDto, CreateAllergyDto } from "./dto/pharmacy.dto";
 
 @Injectable()
 export class PharmacyService {
@@ -18,11 +18,11 @@ export class PharmacyService {
   async listMedications(organizationId: string, activeOnly = false) {
     const where: any = { organizationId };
     if (activeOnly) where.isActive = true;
-    return this.prisma.medication.findMany({ where, orderBy: { name: "asc" }, include: { family: true } });
+    return this.prisma.medication.findMany({ where, orderBy: { name: "asc" }, include: { family: { include: { group: true } } } });
   }
 
   async getMedication(organizationId: string, id: string) {
-    const m = await this.prisma.medication.findFirst({ where: { id, organizationId }, include: { family: true } });
+    const m = await this.prisma.medication.findFirst({ where: { id, organizationId }, include: { family: { include: { group: true } } } });
     if (!m) throw new NotFoundException("Medicamento no encontrado");
     return m;
   }
@@ -35,7 +35,13 @@ export class PharmacyService {
   // --- MEDICATION FAMILIES ---
 
   async listFamilies(organizationId: string) {
-    return this.prisma.medicationFamily.findMany({ where: { organizationId }, orderBy: { name: "asc" } });
+    return this.prisma.medicationFamily.findMany({ where: { organizationId }, orderBy: { name: "asc" }, include: { group: true } });
+  }
+
+  // --- MEDICATION GROUPS ---
+
+  async listGroups(organizationId: string) {
+    return this.prisma.medicationGroup.findMany({ where: { organizationId }, orderBy: { name: "asc" }, include: { families: true } });
   }
 
   // --- INVENTORY BATCHES ---
@@ -335,5 +341,55 @@ export class PharmacyService {
       include: { medication: true, batch: true, prescription: true },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  // --- ALLERGIES ---
+
+  async listPatientAllergies(organizationId: string, patientId: string) {
+    const patient = await this.prisma.patient.findFirst({ where: { id: patientId, organizationId } });
+    if (!patient) throw new NotFoundException("Paciente no encontrado");
+    return this.prisma.patientAllergy.findMany({
+      where: { organizationId, patientId },
+      include: { medication: true, family: true, group: true },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async createAllergy(organizationId: string, patientId: string, dto: CreateAllergyDto) {
+    const patient = await this.prisma.patient.findFirst({ where: { id: patientId, organizationId } });
+    if (!patient) throw new NotFoundException("Paciente no encontrado");
+    return this.prisma.patientAllergy.create({
+      data: { organizationId, patientId, ...dto },
+      include: { medication: true, family: true, group: true },
+    });
+  }
+
+  async deleteAllergy(organizationId: string, id: string) {
+    const a = await this.prisma.patientAllergy.findFirst({ where: { id, organizationId } });
+    if (!a) throw new NotFoundException("Alergia no encontrada");
+    return this.prisma.patientAllergy.delete({ where: { id } });
+  }
+
+  async checkAllergies(organizationId: string, patientId: string, medicationId: string) {
+    const med = await this.prisma.medication.findFirst({
+      where: { id: medicationId, organizationId },
+      include: { family: { include: { group: true } } },
+    });
+    if (!med) throw new NotFoundException("Medicamento no encontrado");
+
+    const allergies = await this.prisma.patientAllergy.findMany({
+      where: {
+        organizationId,
+        patientId,
+        OR: [
+          { medicationId: medicationId },
+          ...(med.familyId ? [{ familyId: med.familyId }] : []),
+          ...(med.family?.groupId ? [{ groupId: med.family.groupId }] : []),
+        ],
+      },
+      include: { medication: true, family: true, group: true },
+    });
+
+    return allergies;
   }
 }

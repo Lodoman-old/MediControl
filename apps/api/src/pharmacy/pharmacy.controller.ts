@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PharmacyService } from "./pharmacy.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
-import { CreateMedicationDto, UpdateMedicationDto, CreateBatchDto, CreateStockMovementDto, CreateSaleDto, CreateDispensingDto } from "./dto/pharmacy.dto";
+import { CreateMedicationDto, UpdateMedicationDto, CreateBatchDto, CreateStockMovementDto, CreateSaleDto, CreateDispensingDto, CreateAllergyDto } from "./dto/pharmacy.dto";
 
 @ApiTags("Farmacia")
 @ApiBearerAuth()
@@ -44,6 +44,13 @@ export class PharmacyController {
     return this.pharm.listFamilies(u.organizationId);
   }
 
+  // --- MEDICATION GROUPS ---
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
+  @Get("groups")
+  async listGroups(@CurrentUser() u: AuthenticatedUser) {
+    return this.pharm.listGroups(u.organizationId);
+  }
+
   // --- INVENTORY ---
   @Roles("SUPERADMIN", "ADMIN")
   @Post("batches")
@@ -64,9 +71,34 @@ export class PharmacyController {
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
-  @Get("movements")
-  async listMovements(@CurrentUser() u: AuthenticatedUser, @Query("batchId") batchId?: string) {
-    return this.pharm.listMovements(u.organizationId, batchId);
+  @Get("dispensings")
+  async listDispensings(@CurrentUser() u: AuthenticatedUser, @Query("prescriptionId") prescriptionId?: string) {
+    return this.pharm.listDispensings(u.organizationId, prescriptionId);
+  }
+
+  // --- ALLERGIES ---
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Get("patients/:patientId/allergies")
+  async listAllergies(@CurrentUser() u: AuthenticatedUser, @Param("patientId") patientId: string) {
+    return this.pharm.listPatientAllergies(u.organizationId, patientId);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Post("patients/:patientId/allergies")
+  async createAllergy(@CurrentUser() u: AuthenticatedUser, @Param("patientId") patientId: string, @Body() dto: CreateAllergyDto) {
+    return this.pharm.createAllergy(u.organizationId, patientId, dto);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Delete("allergies/:id")
+  async deleteAllergy(@CurrentUser() u: AuthenticatedUser, @Param("id") id: string) {
+    return this.pharm.deleteAllergy(u.organizationId, id);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Get("patients/:patientId/allergies/check/:medicationId")
+  async checkAllergies(@CurrentUser() u: AuthenticatedUser, @Param("patientId") patientId: string, @Param("medicationId") medicationId: string) {
+    return this.pharm.checkAllergies(u.organizationId, patientId, medicationId);
   }
 
   // --- POS ---

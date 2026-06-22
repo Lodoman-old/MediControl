@@ -59,6 +59,8 @@ model Organization {
   payments              Payment[]
   medications           Medication[]
   medicationFamilies    MedicationFamily[]
+  medicationGroups      MedicationGroup[]
+  patientAllergies      PatientAllergy[]
   inventoryBatches      InventoryBatch[]
   stockMovements        StockMovement[]
   sales                 Sale[]
@@ -429,6 +431,7 @@ model Patient {
   prescriptions  Prescription[]
   payments       Payment[]
   sales          Sale[]
+  allergies      PatientAllergy[]
 
   @@unique([organizationId, mrn])
   @@index([organizationId])
@@ -883,7 +886,7 @@ model Prescription {
 // FARMACIA - INVENTARIO Y POS (Sprint 5)
 // ============================================================================
 
-model MedicationFamily {
+model MedicationGroup {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @map("organization_id") @db.Uuid
   name           String   @db.VarChar(255)
@@ -891,12 +894,59 @@ model MedicationFamily {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  medications  Medication[]
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  families       MedicationFamily[]
+  PatientAllergy PatientAllergy[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
+  @@map("medication_groups")
+}
+
+model MedicationFamily {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  groupId        String?  @map("group_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group          MedicationGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  medications    Medication[]
+  PatientAllergy PatientAllergy[]
+
+  @@unique([organizationId, name])
+  @@index([groupId])
+  @@index([organizationId])
   @@map("medication_families")
+}
+
+model PatientAllergy {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  medicationId   String?  @map("medication_id") @db.Uuid
+  familyId       String?  @map("family_id") @db.Uuid
+  groupId        String?  @map("group_id") @db.Uuid
+  severity       String   @default("MODERATE") @db.VarChar(20)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  medication   Medication?       @relation(fields: [medicationId], references: [id], onDelete: SetNull)
+  family       MedicationFamily? @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  group        MedicationGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([patientId])
+  @@index([medicationId])
+  @@index([familyId])
+  @@index([groupId])
+  @@map("patient_allergies")
 }
 
 model Medication {
@@ -917,11 +967,12 @@ model Medication {
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family       MedicationFamily? @relation(fields: [familyId], references: [id], onDelete: SetNull)
-  batches      InventoryBatch[]
-  saleItems    SaleItem[]
-  dispensings  Dispensing[]
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family         MedicationFamily? @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  batches        InventoryBatch[]
+  saleItems      SaleItem[]
+  dispensings    Dispensing[]
+  PatientAllergy PatientAllergy[]
 
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])

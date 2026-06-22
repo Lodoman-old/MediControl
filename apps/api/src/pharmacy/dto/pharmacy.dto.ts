@@ -61,3 +61,11 @@ export class CreateDispensingDto {
   @ApiProperty() @IsNumber() @Min(1) quantity!: number;
   @ApiPropertyOptional() @IsOptional() @IsString() instructions?: string;
 }
+
+export class CreateAllergyDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() medicationId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() familyId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() groupId?: string;
+  @ApiPropertyOptional({ default: "MODERATE" }) @IsOptional() @IsString() severity?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
+}

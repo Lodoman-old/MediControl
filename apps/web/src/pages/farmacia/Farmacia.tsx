@@ -9,7 +9,7 @@ interface Medication {
   activeIngredient: string | null; concentration: string | null;
   requiresPrescription: boolean; price: number; currency: string;
   isActive: boolean;
-  family?: { id: string; name: string } | null;
+  family?: { id: string; name: string; group?: { id: string; name: string } | null } | null;
 }
 
 interface Branch {

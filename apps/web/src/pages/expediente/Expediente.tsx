@@ -88,7 +88,17 @@ interface Prescription {
   doctor: { person: { firstName: string; lastNameP: string } };
 }
 
-type Tab = "notes" | "diagnoses" | "treatments" | "consents" | "lab" | "prescriptions";
+interface Allergy {
+  id: string;
+  severity: string;
+  notes: string | null;
+  createdAt: string;
+  medication?: { id: string; name: string } | null;
+  family?: { id: string; name: string; group?: { id: string; name: string } | null } | null;
+  group?: { id: string; name: string } | null;
+}
+
+type Tab = "notes" | "diagnoses" | "treatments" | "consents" | "lab" | "prescriptions" | "allergies";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "notes", label: "Notas de evolucion" },
@@ -97,6 +107,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "consents", label: "Consentimientos" },
   { key: "lab", label: "Estudios" },
   { key: "prescriptions", label: "Recetas" },
+  { key: "allergies", label: "Alergias" },
 ];
 
 const NOTE_STATUS = { ACTIVE: "Activo", RESOLVED: "Resuelto", SUSPECTED: "Sospechado" } as Record<string, string>;
@@ -154,6 +165,12 @@ export default function ExpedientePage() {
   const [consents, setConsents] = useState<Consent[]>([]);
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [allergies, setAllergies] = useState<Allergy[]>([]);
+  const [showAllergyForm, setShowAllergyForm] = useState(false);
+  const [newAllergyMedId, setNewAllergyMedId] = useState("");
+  const [newAllergySeverity, setNewAllergySeverity] = useState("MODERATE");
+  const [newAllergyNotes, setNewAllergyNotes] = useState("");
+  const [meds, setMeds] = useState<Array<{ id: string; name: string; family?: { id: string; name: string; group?: { id: string; name: string } } }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,6 +186,8 @@ export default function ExpedientePage() {
       api.get(`/clinical-records/${patientId}/consents`).then((r) => setConsents(r.data ?? [])).catch(() => {}),
       api.get(`/clinical-records/${patientId}/lab-orders`).then((r) => setLabOrders(r.data ?? [])).catch(() => {}),
       api.get(`/prescriptions/patient/${patientId}`).then((r) => setPrescriptions(r.data ?? [])).catch(() => {}),
+      api.get(`/pharmacy/patients/${patientId}/allergies`).then((r) => setAllergies(r.data ?? [])).catch(() => {}),
+      api.get("/pharmacy/medications?active=true").then((r) => setMeds(r.data ?? [])).catch(() => {}),
     ])
       .catch((err) => setError(extractErrorMessage(err)))
       .finally(() => setLoading(false));
@@ -311,6 +330,14 @@ export default function ExpedientePage() {
               className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
             >
               + Nueva receta
+            </button>
+          )}
+          {activeTab === "allergies" && (
+            <button
+              onClick={() => setShowAllergyForm(!showAllergyForm)}
+              className="text-sm text-primary-600 hover:text-primary-800 px-2 whitespace-nowrap"
+            >
+              {showAllergyForm ? "Cancelar" : "+ Agregar alergia"}
             </button>
           )}
         </div>
@@ -623,6 +650,109 @@ export default function ExpedientePage() {
                     </button>
                   </div>
                 </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === "allergies" && (
+        <div className="space-y-4">
+          {showAllergyForm && (
+            <div className="card space-y-3 max-w-lg">
+              <h3 className="text-sm font-semibold text-ink-700">Nueva alergia</h3>
+              <div>
+                <label className="label">Medicamento</label>
+                <select value={newAllergyMedId} onChange={e => setNewAllergyMedId(e.target.value)} className="input">
+                  <option value="">Seleccionar medicamento...</option>
+                  {meds.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}{m.family?.group ? ` (${m.family.group.name} > ${m.family.name})` : m.family ? ` (${m.family.name})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Severidad</label>
+                <select value={newAllergySeverity} onChange={e => setNewAllergySeverity(e.target.value)} className="input">
+                  <option value="MILD">Leve</option>
+                  <option value="MODERATE">Moderada</option>
+                  <option value="SEVERE">Grave</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Notas</label>
+                <textarea value={newAllergyNotes} onChange={e => setNewAllergyNotes(e.target.value)} className="input" rows={2} placeholder="Ej: Anafilaxia, urticaria, etc." />
+              </div>
+              <button
+                onClick={async () => {
+                  if (!newAllergyMedId) return;
+                  try {
+                    const med = meds.find(m => m.id === newAllergyMedId);
+                    await api.post(`/pharmacy/patients/${patientId}/allergies`, {
+                      medicationId: med && !med.family ? newAllergyMedId : undefined,
+                      familyId: med?.family?.id,
+                      groupId: med?.family?.group?.id,
+                      severity: newAllergySeverity,
+                      notes: newAllergyNotes || undefined,
+                    });
+                    const { data } = await api.get(`/pharmacy/patients/${patientId}/allergies`);
+                    setAllergies(data ?? []);
+                    setShowAllergyForm(false);
+                    setNewAllergyMedId("");
+                    setNewAllergySeverity("MODERATE");
+                    setNewAllergyNotes("");
+                  } catch (e) { setError(extractErrorMessage(e)); }
+                }}
+                className="btn-primary text-sm"
+              >
+                Guardar alergia
+              </button>
+            </div>
+          )}
+
+          {allergies.length === 0 && !showAllergyForm ? (
+            <div className="card text-center py-8">
+              <p className="text-ink-500 text-sm">No hay alergias registradas</p>
+            </div>
+          ) : (
+            allergies.map((a) => (
+              <div key={a.id} className="card flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`badge ${
+                      a.severity === "SEVERE" ? "bg-danger-100 text-danger-700" :
+                      a.severity === "MODERATE" ? "bg-warning-100 text-warning-700" :
+                      "bg-info-100 text-info-700"
+                    }`}>
+                      {a.severity === "SEVERE" ? "Grave" : a.severity === "MODERATE" ? "Moderada" : "Leve"}
+                    </span>
+                    <span className="text-sm font-medium text-ink-900">
+                      {a.medication?.name ?? a.family?.name ?? a.group?.name ?? "Alergia"}
+                    </span>
+                  </div>
+                  {a.family?.group && (
+                    <p className="text-xs text-ink-500 mt-1">
+                      Grupo: {a.family.group.name} &middot; Familia: {a.family.name}
+                    </p>
+                  )}
+                  {a.group && !a.family && (
+                    <p className="text-xs text-ink-500 mt-1">Grupo: {a.group.name}</p>
+                  )}
+                  {a.notes && <p className="text-xs text-ink-600 mt-1">{a.notes}</p>}
+                  <p className="text-xs text-ink-400 mt-1">{formatDate(a.createdAt)}</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.delete(`/pharmacy/allergies/${a.id}`);
+                      setAllergies(prev => prev.filter(x => x.id !== a.id));
+                    } catch (e) { setError(extractErrorMessage(e)); }
+                  }}
+                  className="text-xs text-danger-600 hover:text-danger-800 shrink-0"
+                >
+                  Eliminar
+                </button>
               </div>
             ))
           )}
