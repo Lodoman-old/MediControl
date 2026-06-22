@@ -23,8 +23,16 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       const allowed = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["http://localhost:5173"];
-      // Allow requests with no origin (file:// in Capacitor WebView) or from Capacitor
-      if (!origin || allowed.includes(origin) || origin === "null" || origin.startsWith("capacitor://") || origin.startsWith("file://")) {
+      // Allow requests from Capacitor APK (null/file://), local dev servers, and configured origins
+      if (
+        !origin ||
+        allowed.includes(origin) ||
+        origin === "null" ||
+        origin.startsWith("capacitor://") ||
+        origin.startsWith("file://") ||
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("https://localhost")
+      ) {
         callback(null, true);
       } else {
         callback(null, false);
