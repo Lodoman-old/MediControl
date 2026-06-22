@@ -690,7 +690,7 @@ export default function ExpedientePage() {
                   try {
                     const med = meds.find(m => m.id === newAllergyMedId);
                     await api.post(`/pharmacy/patients/${patientId}/allergies`, {
-                      medicationId: med && !med.family ? newAllergyMedId : undefined,
+                      medicationId: newAllergyMedId,
                       familyId: med?.family?.id,
                       groupId: med?.family?.group?.id,
                       severity: newAllergySeverity,
