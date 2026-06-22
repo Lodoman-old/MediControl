@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'MediControl',
   webDir: 'dist',
   server: {
-    allowNavigation: ['medicontrol-app.onrender.com'],
+    allowNavigation: ['medicontrol-api.onrender.com'],
   },
   android: {
     buildOptions: {

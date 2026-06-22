@@ -7,13 +7,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:capacitor": "vite build --base ./",
+    "build:capacitor": "cross-env VITE_API_URL=https://medicontrol-app.onrender.com/api/v1 vite build --base ./",
+    "cap:sync": "pnpm build:capacitor && npx cap sync android",
     "preview": "vite preview --port 4173",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rimraf dist .turbo node_modules/.vite",
-    "cap:sync": "pnpm build:capacitor && npx cap sync android",
     "cap:open": "npx cap open android"
   },
   "dependencies": {
@@ -45,6 +45,7 @@
     "@typescript-eslint/parser": "^8.13.0",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
     "eslint": "^9.14.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",

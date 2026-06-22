@@ -14,7 +14,7 @@ export default function Logo({
   alt = "MediControl",
 }: LogoProps) {
   const src =
-    variant === "isopo" ? "./isopo.png" : "./logo-horizontal.png";
+    variant === "isopo" ? "isopo.png" : "logo-horizontal.png";
 
   return (
     <img
