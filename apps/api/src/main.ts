@@ -18,10 +18,18 @@ async function bootstrap() {
 
   initSentry(configService);
 
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
   app.use(cookieParser());
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(",") ?? ["http://localhost:5173"],
+    origin: (origin, callback) => {
+      const allowed = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["http://localhost:5173"];
+      // Allow requests with no origin (file:// in Capacitor WebView) or from Capacitor
+      if (!origin || allowed.includes(origin) || origin === "null" || origin.startsWith("capacitor://") || origin.startsWith("file://")) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   });
 

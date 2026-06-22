@@ -1,12 +1,15 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/stores/authStore";
 import { isTokenExpired } from "@/lib/jwt";
+import { Capacitor } from "@capacitor/core";
 
 // En desarrollo usa el proxy de Vite (/api/v1 → localhost:3000/api/v1)
 // En produccion se configura con VITE_API_URL
+// En Capacitor (APK) usa la URL publica de Render
 const API_BASE_URL =
-  (import.meta.env["VITE_API_URL"] as string | undefined) ??
-  "/api/v1";
+  Capacitor.isNativePlatform()
+    ? "https://medicontrol-app.onrender.com/api/v1"
+    : (import.meta.env["VITE_API_URL"] as string | undefined) ?? "/api/v1";
 
 export interface ApiErrorBody {
   statusCode: number;

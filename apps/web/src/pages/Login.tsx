@@ -8,6 +8,8 @@ import { useLogin, useVerifyMfaLogin } from "@/hooks/useAuth";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 import type { AuthUser } from "@/stores/authStore";
 import { extractErrorMessage } from "@/lib/api";
+import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
 
 const loginSchema = z.object({
   email: z.string().email("Correo invalido"),
@@ -20,24 +22,28 @@ interface FromState {
   from?: { pathname?: string };
 }
 
+const BIOMETRIC_KEY = "biometric_credentials";
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthed = useAuthStore(selectIsAuthenticated);
   const user = useAuthStore((s) => s.user);
-  const clear = useAuthStore((s) => s.clear);
   const login = useLogin();
   const verifyMfa = useVerifyMfaLogin();
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioChecking, setBioChecking] = useState(true);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     getValues,
+    setValue,
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -56,12 +62,27 @@ export default function LoginPage() {
     }
   }, []);
 
-  const onSubmit = handleSubmit(async (data) => {
+  useEffect(() => {
+    (async () => {
+      if (!Capacitor.isNativePlatform()) { setBioChecking(false); return; }
+      try {
+        const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
+        const result = await BiometricAuth.isAvailable();
+        setBioAvailable(result.available);
+      } catch { setBioAvailable(false); }
+      setBioChecking(false);
+    })();
+  }, []);
+
+  const doLogin = async (data: LoginForm) => {
     try {
       const result = await login.mutateAsync(data);
       if (result.mfaRequired && result.mfaToken) {
         setMfaToken(result.mfaToken);
         return;
+      }
+      if (Capacitor.isNativePlatform()) {
+        await Preferences.set({ key: BIOMETRIC_KEY, value: JSON.stringify({ email: data.email, password: data.password }) });
       }
       if (result.user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
@@ -72,7 +93,9 @@ export default function LoginPage() {
     } catch (err) {
       console.error(extractErrorMessage(err));
     }
-  });
+  };
+
+  const onSubmit = handleSubmit(doLogin);
 
   const onMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +111,30 @@ export default function LoginPage() {
     } catch (err) {
       setMfaError(extractErrorMessage(err));
     }
+  };
+
+  const handleBiometric = async () => {
+    try {
+      const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
+      const { data } = await Preferences.get({ key: BIOMETRIC_KEY });
+      if (!data) return;
+      const creds = JSON.parse(data) as { email: string; password: string };
+      const result = await BiometricAuth.authenticate({
+        reason: "Ingresa con tu huella digital para acceder a MediControl",
+        cancelTitle: "Cancelar",
+        allowDeviceCredential: true,
+      });
+      if (result.authenticated) {
+        setValue("email", creds.email);
+        setValue("password", creds.password);
+        setTimeout(() => doLogin(creds), 100);
+      }
+    } catch {}
+  };
+
+  const clearBiometric = async () => {
+    await Preferences.remove({ key: BIOMETRIC_KEY });
+    setBioAvailable(false);
   };
 
   if (checkingSession) {
@@ -253,6 +300,28 @@ export default function LoginPage() {
                 {login.isPending ? "Ingresando..." : "Ingresar"}
               </button>
             </form>
+
+            {!bioChecking && bioAvailable && (
+              <div className="mt-3">
+                <button
+                  onClick={handleBiometric}
+                  className="w-full rounded-md px-4 py-2.5 font-medium transition-colors border border-primary-300 lg:border-ink-300 text-primary-200 lg:text-ink-700 hover:bg-white/10 lg:hover:bg-ink-50 flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2a6 6 0 0 0-6 6v4a6 6 0 0 0 12 0V8a6 6 0 0 0-6-6z" />
+                    <path d="M5 14a7 7 0 0 0 14 0" />
+                    <path d="M12 18v4" />
+                  </svg>
+                  Ingresar con huella digital
+                </button>
+                <button
+                  onClick={clearBiometric}
+                  className="w-full text-xs text-primary-200 lg:text-ink-500 hover:underline mt-1 text-center"
+                >
+                  Olvidar datos biometricos
+                </button>
+              </div>
+            )}
 
             <div className="mt-4 flex flex-col items-center gap-2 text-sm">
               <Link to="/forgot-password" className="text-primary-200 lg:text-primary-600 hover:underline">
