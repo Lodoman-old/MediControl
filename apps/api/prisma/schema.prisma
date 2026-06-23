@@ -69,6 +69,7 @@ model Organization {
   notifications         Notification[]
   notificationTemplates NotificationTemplate[]
   notificationLogs      NotificationLog[]
+  deviceTokens          DeviceToken[]
   cashRegisters         CashRegister[]
 
   @@map("organizations")
@@ -178,6 +179,7 @@ model User {
   cashRegistersOpened CashRegister[]       @relation("openedBy")
   cashRegistersClosed CashRegister[]       @relation("closedBy")
   cashMovements       CashMovement[]
+  deviceTokens        DeviceToken[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -1174,6 +1176,7 @@ enum NotificationChannel {
   IN_APP
   EMAIL
   WHATSAPP
+  PUSH
 }
 
 enum NotificationStatus {
@@ -1247,6 +1250,25 @@ model NotificationLog {
   @@index([organizationId, createdAt])
   @@index([notificationId])
   @@map("notification_logs")
+}
+
+model DeviceToken {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  token          String   @db.Text
+  platform       String   @db.VarChar(20)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("device_tokens")
 }
 
 model LabProvider {

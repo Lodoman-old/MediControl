@@ -130,6 +130,14 @@ api.interceptors.response.use(
   },
 );
 
+export async function registerDeviceToken(token: string, platform: string) {
+  return api.post("/notifications/register-device", { token, platform });
+}
+
+export async function unregisterDeviceToken(token: string) {
+  return api.post("/notifications/unregister-device", { token });
+}
+
 export function extractErrorMessage(err: unknown): string {
   if (axios.isAxiosError<ApiErrorBody>(err)) {
     const body = err.response?.data;

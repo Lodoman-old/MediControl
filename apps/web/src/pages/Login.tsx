@@ -10,6 +10,7 @@ import type { AuthUser } from "@/stores/authStore";
 import { extractErrorMessage } from "@/lib/api";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import { BiometricAuth } from "@aparajita/capacitor-biometric-auth";
 
 const loginSchema = z.object({
   email: z.string().email("Correo invalido"),
@@ -66,7 +67,6 @@ export default function LoginPage() {
     (async () => {
       if (!Capacitor.isNativePlatform()) { setBioChecking(false); return; }
       try {
-        const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
         const result = await BiometricAuth.isAvailable();
         setBioAvailable(result.available);
       } catch { setBioAvailable(false); }

@@ -11,6 +11,7 @@ import {
   SendNotificationDto,
   NotificationFilterDto,
 } from "./dto/notification.dto";
+import { RegisterDeviceDto, UnregisterDeviceDto } from "./dto/device-token.dto";
 
 @ApiTags("Notificaciones")
 @ApiBearerAuth()
@@ -95,6 +96,20 @@ export class NotificationsController {
     @Body() dto: UpdateNotificationTemplateDto,
   ) {
     return this.svc.updateTemplate(u.organizationId, id, dto);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @Post("register-device")
+  @ApiOperation({ summary: "Registrar token de dispositivo para push notifications" })
+  async registerDevice(@CurrentUser() u: AuthenticatedUser, @Body() dto: RegisterDeviceDto) {
+    return this.svc.registerDevice(u.organizationId, u.userId, dto.token, dto.platform);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @Post("unregister-device")
+  @ApiOperation({ summary: "Desregistrar token de dispositivo" })
+  async unregisterDevice(@CurrentUser() u: AuthenticatedUser, @Body() dto: UnregisterDeviceDto) {
+    return this.svc.unregisterDevice(u.userId, dto.token);
   }
 
   @Roles("SUPERADMIN", "ADMIN")

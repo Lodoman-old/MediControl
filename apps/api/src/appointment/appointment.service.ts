@@ -665,6 +665,12 @@ export class AppointmentService {
           referenceType: "appointment",
           referenceId: appointment.id,
         });
+        await this.notifications.sendPushToUser(
+          appointment.doctor.userId,
+          "Nueva cita pendiente",
+          `${patientName} - ${serviceName} el ${dateStr} a las ${timeStr}`,
+          { type: "APPOINTMENT_PENDING_CONFIRMATION", appointmentId: appointment.id },
+        );
       }
     } catch (err) {
       this.logger.error("Error enviando notificacion de cita pendiente", err);

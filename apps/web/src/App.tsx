@@ -38,8 +38,10 @@ import CashRegisterPage from "@/pages/farmacia/CashRegister";
 import ReportesPage from "@/pages/reportes/Reportes";
 import ReportSchedulesPage from "@/pages/reportes/ReportSchedules";
 import ProtectedLayout from "@/components/ProtectedLayout";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function App() {
+  usePushNotifications();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />

@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
 import { WhatsappService } from "../whatsapp/whatsapp.service";
+import { PushService } from "./push/push.service";
 import type { CreateNotificationDto, SendNotificationDto } from "./dto/notification.dto";
 
 @Injectable()
@@ -13,6 +14,7 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly whatsapp: WhatsappService,
+    private readonly push: PushService,
     private readonly config: ConfigService,
   ) {}
 
@@ -34,6 +36,8 @@ export class NotificationsService {
       await this.sendEmail(organizationId, notification.id, dto);
     } else if (dto.channel === "WHATSAPP") {
       await this.sendWhatsApp(organizationId, notification.id, dto);
+    } else if (dto.channel === "PUSH") {
+      await this.sendPush(organizationId, notification.id, dto);
     } else {
       await this.markSent(notification.id);
     }
@@ -280,6 +284,67 @@ export class NotificationsService {
         await this.updateReminderStatus(reminder.id, "FAILED", (err as Error).message);
       }
     }
+  }
+
+  async registerDevice(organizationId: string, userId: string, token: string, platform: string) {
+    const existing = await this.prisma.deviceToken.findUnique({
+      where: { userId_token: { userId, token } },
+    });
+    if (existing) {
+      return this.prisma.deviceToken.update({
+        where: { id: existing.id },
+        data: { isActive: true, platform },
+      });
+    }
+    return this.prisma.deviceToken.create({
+      data: { organizationId, userId, token, platform },
+    });
+  }
+
+  async unregisterDevice(userId: string, token: string) {
+    const existing = await this.prisma.deviceToken.findUnique({
+      where: { userId_token: { userId, token } },
+    });
+    if (existing) {
+      await this.prisma.deviceToken.update({
+        where: { id: existing.id },
+        data: { isActive: false },
+      });
+    }
+    return { ok: true };
+  }
+
+  async getUserDeviceTokens(userId: string): Promise<string[]> {
+    const tokens = await this.prisma.deviceToken.findMany({
+      where: { userId, isActive: true },
+      select: { token: true },
+    });
+    return tokens.map((t) => t.token);
+  }
+
+  async sendPushToUser(userId: string, title: string, body: string, data?: Record<string, string>) {
+    const tokens = await this.getUserDeviceTokens(userId);
+    if (tokens.length === 0) return { success: 0, failed: 0 };
+    return this.push.sendToMultipleDevices(tokens, { title, body, data });
+  }
+
+  private async sendPush(organizationId: string, notificationId: string, dto: CreateNotificationDto) {
+    const tokens = await this.getUserDeviceTokens(dto.userId);
+    if (tokens.length === 0) {
+      await this.markSent(notificationId);
+      return;
+    }
+    const result = await this.push.sendToMultipleDevices(tokens, {
+      title: dto.title,
+      body: dto.message,
+      data: {
+        type: dto.type,
+        referenceType: dto.referenceType ?? "",
+        referenceId: dto.referenceId ?? "",
+      },
+    });
+    await this.logDelivery(organizationId, notificationId, "PUSH", `tokens:${tokens.length}`, dto.title, dto.message, result.failed === 0);
+    await this.updateStatus(notificationId, result.failed === 0 ? "SENT" : "FAILED");
   }
 
   private async sendEmail(organizationId: string, notificationId: string, dto: CreateNotificationDto) {

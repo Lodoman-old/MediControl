@@ -34,6 +34,12 @@ services:
         sync: false
       - key: MFA_ENCRYPTION_KEY
         generateValue: true
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
 
   - type: static
     name: medicontrol-web
