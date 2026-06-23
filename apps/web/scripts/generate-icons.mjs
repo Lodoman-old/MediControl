@@ -15,12 +15,12 @@ const SIZES = {
 };
 
 async function main() {
-  const srcPath = join(root, "public", "isopo.png");
+  const srcPath = join(root, "..", "mobile", "assets", "LogoMediControl.png");
   const src = await Jimp.read(srcPath);
   const w = src.bitmap.width;
   const h = src.bitmap.height;
 
-  // Find minimal bounding box of non-white content
+  // Crop to non-white bounding box
   let minX = w, minY = h, maxX = 0, maxY = 0;
   src.scan(0, 0, w, h, (x, y) => {
     const hex = src.getPixelColor(x, y);
@@ -35,9 +35,9 @@ async function main() {
   const cw = maxX - minX + 1;
   const ch = maxY - minY + 1;
   const cropped = src.clone().crop({ x: minX, y: minY, w: cw, h: ch });
-  console.log(`Cropped: ${cw}x${ch} (from ${w}x${h}), offset ${minX},${minY}`);
+  console.log(`Cropped: ${cw}x${ch} (from ${w}x${h})`);
 
-  // Make it square by adding white padding
+  // Make square with white padding
   const maxDim = Math.max(cw, ch);
   const square = new Jimp({ width: maxDim, height: maxDim, color: 0xffffffff });
   const padX = Math.floor((maxDim - cw) / 2);
@@ -52,13 +52,12 @@ async function main() {
 
     const resized = square.resize({ w: size, h: size });
     const png = await resized.getBuffer("image/png");
-
     writeFileSync(join(outDir, "ic_launcher.png"), png);
     writeFileSync(join(outDir, "ic_launcher_round.png"), png);
     console.log(`Generated ${dir} (${size}x${size})`);
   }
 
-  // Adaptive icon foreground (108x108) - square is at maxDim x maxDim
+  // Adaptive icon foreground (108x108)
   const fgSize = 108;
   const fgCanvas = new Jimp({ width: fgSize, height: fgSize, color: 0x00000000 });
   const fgScale = fgSize / maxDim;
@@ -71,27 +70,22 @@ async function main() {
 
   const anydpiDir = join(resDir, "mipmap-anydpi-v26");
   if (!existsSync(anydpiDir)) mkdirSync(anydpiDir, { recursive: true });
-
   const fgPng = await fgCanvas.getBuffer("image/png");
   writeFileSync(join(anydpiDir, "ic_launcher_foreground.png"), fgPng);
 
-  const adaptiveXml = `<?xml version="1.0" encoding="utf-8"?>
+  const xml = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
 </adaptive-icon>`;
-  writeFileSync(join(anydpiDir, "ic_launcher.xml"), adaptiveXml);
-  writeFileSync(join(anydpiDir, "ic_launcher_round.xml"), adaptiveXml);
+  writeFileSync(join(anydpiDir, "ic_launcher.xml"), xml);
+  writeFileSync(join(anydpiDir, "ic_launcher_round.xml"), xml);
 
-  // Set background color to white so foreground shows properly
-  const bgXmlPath = join(resDir, "values", "ic_launcher_background.xml");
-  writeFileSync(bgXmlPath, `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
-</resources>`);
+  // White background color for adaptive icon
+  writeFileSync(join(resDir, "values", "ic_launcher_background.xml"),
+    `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#FFFFFF</color>\n</resources>`);
 
-  console.log("Generated adaptive icon (108x108)");
-  console.log("Done - all icons generated from isopo.png (full color, white bg)");
+  console.log("Done - icons from LogoMediControl.png");
 }
 
 main().catch(console.error);
