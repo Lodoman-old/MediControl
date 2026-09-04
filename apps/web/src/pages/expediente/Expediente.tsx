@@ -127,7 +127,7 @@ const downloadPdf = async (id: string) => {
     a.download = `receta-${id.slice(0, 8)}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-  } catch {}
+  } catch (e) { alert(extractErrorMessage(e)); }
 };
 
 const downloadAllPrescriptionsPdf = async (patientId: string) => {
@@ -139,7 +139,7 @@ const downloadAllPrescriptionsPdf = async (patientId: string) => {
     a.download = `recetas-completas-${patientId.slice(0, 8)}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-  } catch {}
+  } catch (e) { alert(extractErrorMessage(e)); }
 };
 
 const downloadLabOrderPdf = async (patientId: string, orderId: string) => {
@@ -151,7 +151,7 @@ const downloadLabOrderPdf = async (patientId: string, orderId: string) => {
     a.download = `solicitud-estudio-${orderId.slice(0, 8)}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-  } catch {}
+  } catch (e) { alert(extractErrorMessage(e)); }
 };
 
 export default function ExpedientePage() {
@@ -174,20 +174,33 @@ export default function ExpedientePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [editingNote, setEditingNote] = useState<ClinicalNote | null>(null);
+  const [noteSubjective, setNoteSubjective] = useState("");
+  const [noteObjective, setNoteObjective] = useState("");
+  const [noteAssessment, setNoteAssessment] = useState("");
+  const [notePlan, setNotePlan] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+
+  const [resultOrderId, setResultOrderId] = useState<string | null>(null);
+  const [resultText, setResultText] = useState("");
+  const [resultDate, setResultDate] = useState(new Date().toISOString().slice(0, 10));
+  const [resultNotes, setResultNotes] = useState("");
+  const [savingResult, setSavingResult] = useState(false);
+
   useEffect(() => {
     if (!patientId) return;
     setLoading(true);
     setError(null);
     Promise.all([
       api.get(`/patients/${patientId}`).then((r) => setPatient(r.data)),
-      api.get(`/clinical-records/${patientId}/notes`).then((r) => setNotes(r.data ?? [])).catch(() => {}),
-      api.get(`/clinical-records/${patientId}/diagnoses`).then((r) => setDiagnoses(r.data ?? [])).catch(() => {}),
-      api.get(`/clinical-records/${patientId}/treatments`).then((r) => setTreatments(r.data ?? [])).catch(() => {}),
-      api.get(`/clinical-records/${patientId}/consents`).then((r) => setConsents(r.data ?? [])).catch(() => {}),
-      api.get(`/clinical-records/${patientId}/lab-orders`).then((r) => setLabOrders(r.data ?? [])).catch(() => {}),
-      api.get(`/prescriptions/patient/${patientId}`).then((r) => setPrescriptions(r.data ?? [])).catch(() => {}),
-      api.get(`/pharmacy/patients/${patientId}/allergies`).then((r) => setAllergies(r.data ?? [])).catch(() => {}),
-      api.get("/pharmacy/medications?active=true").then((r) => setMeds(r.data ?? [])).catch(() => {}),
+      api.get(`/clinical-records/${patientId}/notes`).then((r) => setNotes(r.data ?? [])).catch((e) => console.warn("Error loading notes:", extractErrorMessage(e))),
+      api.get(`/clinical-records/${patientId}/diagnoses`).then((r) => setDiagnoses(r.data ?? [])).catch((e) => console.warn("Error loading diagnoses:", extractErrorMessage(e))),
+      api.get(`/clinical-records/${patientId}/treatments`).then((r) => setTreatments(r.data ?? [])).catch((e) => console.warn("Error loading treatments:", extractErrorMessage(e))),
+      api.get(`/clinical-records/${patientId}/consents`).then((r) => setConsents(r.data ?? [])).catch((e) => console.warn("Error loading consents:", extractErrorMessage(e))),
+      api.get(`/clinical-records/${patientId}/lab-orders`).then((r) => setLabOrders(r.data ?? [])).catch((e) => console.warn("Error loading lab orders:", extractErrorMessage(e))),
+      api.get(`/prescriptions/patient/${patientId}`).then((r) => setPrescriptions(r.data ?? [])).catch((e) => console.warn("Error loading prescriptions:", extractErrorMessage(e))),
+      api.get(`/pharmacy/patients/${patientId}/allergies`).then((r) => setAllergies(r.data ?? [])).catch((e) => console.warn("Error loading allergies:", extractErrorMessage(e))),
+      api.get("/pharmacy/medications?active=true").then((r) => setMeds(r.data ?? [])).catch((e) => console.warn("Error loading meds:", extractErrorMessage(e))),
     ])
       .catch((err) => setError(extractErrorMessage(err)))
       .finally(() => setLoading(false));
@@ -215,6 +228,59 @@ export default function ExpedientePage() {
       setError(extractErrorMessage(err));
     }
   }, [patientId]);
+
+  const openEditNote = (note: ClinicalNote) => {
+    setEditingNote(note);
+    setNoteSubjective(note.subjective ?? "");
+    setNoteObjective(note.objective ?? "");
+    setNoteAssessment(note.assessment ?? "");
+    setNotePlan(note.plan ?? "");
+  };
+
+  const saveNoteEdit = async () => {
+    if (!editingNote) return;
+    setSavingNote(true);
+    try {
+      await api.patch(`/clinical-records/${patientId}/notes/${editingNote.id}`, {
+        subjective: noteSubjective || undefined,
+        objective: noteObjective || undefined,
+        assessment: noteAssessment || undefined,
+        plan: notePlan || undefined,
+      });
+      setNotes((prev) => prev.map((n) =>
+        n.id === editingNote.id
+          ? { ...n, subjective: noteSubjective || null, objective: noteObjective || null, assessment: noteAssessment || null, plan: notePlan || null }
+          : n
+      ));
+      setEditingNote(null);
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const saveLabResult = async () => {
+    if (!resultOrderId || !patientId) return;
+    setSavingResult(true);
+    try {
+      await api.post(`/clinical-records/${patientId}/lab-orders/${resultOrderId}/results`, {
+        resultText: resultText || undefined,
+        resultDate: resultDate || undefined,
+        notes: resultNotes || undefined,
+      });
+      const { data } = await api.get(`/clinical-records/${patientId}/lab-orders`);
+      setLabOrders(data ?? []);
+      setResultOrderId(null);
+      setResultText("");
+      setResultDate(new Date().toISOString().slice(0, 10));
+      setResultNotes("");
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setSavingResult(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -361,7 +427,10 @@ export default function ExpedientePage() {
               <div key={n.id} className="card">
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-xs text-ink-500">{formatDate(n.noteDate)}</span>
-                  <span className="text-xs text-ink-400">#{n.id.slice(0, 8)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-ink-400">#{n.id.slice(0, 8)}</span>
+                    <button onClick={() => openEditNote(n)} className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
+                  </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   {n.subjective && (
@@ -584,6 +653,38 @@ export default function ExpedientePage() {
                         ))}
                       </div>
                     )}
+                    {o.status !== "COMPLETED" && o.status !== "CANCELLED" && (
+                      <div className="mt-3 pt-3 border-t border-ink-100">
+                        {resultOrderId === o.id ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="label">Fecha del resultado</label>
+                                <input type="date" className="input" value={resultDate} onChange={(e) => setResultDate(e.target.value)} />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="label">Resultado</label>
+                              <textarea className="input" rows={4} value={resultText} onChange={(e) => setResultText(e.target.value)} placeholder="Hallazgos, valores, observaciones..." />
+                            </div>
+                            <div>
+                              <label className="label">Notas internas</label>
+                              <input className="input" value={resultNotes} onChange={(e) => setResultNotes(e.target.value)} placeholder="Opcional" />
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={saveLabResult} disabled={savingResult} className="btn-primary text-xs">
+                                {savingResult ? "Guardando..." : "Guardar resultado"}
+                              </button>
+                              <button onClick={() => setResultOrderId(null)} className="btn-secondary text-xs">Cancelar</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setResultOrderId(o.id); setResultText(""); setResultNotes(""); }} className="text-xs text-primary-600 hover:text-primary-800 font-medium">
+                            + Agregar resultado
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -597,7 +698,7 @@ export default function ExpedientePage() {
           {prescriptions.length > 0 && (
             <div className="flex gap-2">
               <button
-                onClick={() => downloadAllPrescriptionsPdf(patientId)}
+                onClick={() => patientId && downloadAllPrescriptionsPdf(patientId)}
                 className="btn-secondary text-sm"
               >
                 Receta completa PDF
@@ -756,6 +857,38 @@ export default function ExpedientePage() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {editingNote && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setEditingNote(null)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-ink-900 mb-4">Editar nota de evolucion</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="label">Subjetivo (S)</label>
+                <textarea className="input" rows={3} value={noteSubjective} onChange={(e) => setNoteSubjective(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Objetivo (O)</label>
+                <textarea className="input" rows={3} value={noteObjective} onChange={(e) => setNoteObjective(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Evaluacion (A)</label>
+                <textarea className="input" rows={3} value={noteAssessment} onChange={(e) => setNoteAssessment(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Plan (P)</label>
+                <textarea className="input" rows={3} value={notePlan} onChange={(e) => setNotePlan(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveNoteEdit} disabled={savingNote} className="btn-primary flex-1">
+                {savingNote ? "Guardando..." : "Guardar cambios"}
+              </button>
+              <button onClick={() => setEditingNote(null)} className="btn-secondary">Cancelar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

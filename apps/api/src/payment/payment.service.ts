@@ -80,6 +80,12 @@ export class PaymentService {
     if (filters?.appointmentId) where.appointmentId = filters.appointmentId;
     if (filters?.status) where.status = filters.status;
     if (filters?.method) where.method = filters.method;
+    if (filters?.date) {
+      const day = new Date(filters.date);
+      const start = new Date(day); start.setHours(0, 0, 0, 0);
+      const end = new Date(day); end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    }
 
     return this.prisma.payment.findMany({
       where,

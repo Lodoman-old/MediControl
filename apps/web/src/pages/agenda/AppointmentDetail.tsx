@@ -48,14 +48,22 @@ interface AppointmentDetail {
 const STATUS_ACTIONS: Record<string, { label: string; action: string; role: string }[]> = {
   SCHEDULED: [
     { label: "Registrar entrada", action: "check-in", role: "RECEPTION" },
+    { label: "Pendiente validacion pago", action: "set-payment-pending", role: "ADMIN" },
+    { label: "Pendiente validacion pago", action: "set-payment-pending", role: "RECEPTION" },
+    { label: "Cancelar cita", action: "cancel", role: "ADMIN" },
+    { label: "Cancelar cita", action: "cancel", role: "SUPERADMIN" },
   ],
   CHECKED_IN: [
     { label: "Iniciar consulta", action: "start-consult", role: "DOCTOR" },
     { label: "Marcar inasistencia", action: "no-show", role: "DOCTOR" },
+    { label: "Cancelar cita", action: "cancel", role: "ADMIN" },
+    { label: "Cancelar cita", action: "cancel", role: "SUPERADMIN" },
   ],
   IN_TRIAGE: [
     { label: "Iniciar consulta", action: "start-consult", role: "DOCTOR" },
     { label: "Marcar inasistencia", action: "no-show", role: "DOCTOR" },
+    { label: "Cancelar cita", action: "cancel", role: "ADMIN" },
+    { label: "Cancelar cita", action: "cancel", role: "SUPERADMIN" },
   ],
   IN_CONSULT: [
     { label: "Finalizar consulta", action: "complete-consult", role: "DOCTOR" },
@@ -71,6 +79,11 @@ export default function AppointmentDetailPage() {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  const [savingReschedule, setSavingReschedule] = useState(false);
 
   const load = () => {
     if (!id) return;
@@ -86,14 +99,14 @@ export default function AppointmentDetailPage() {
     if (!appt) return;
     api.get(`/prescriptions/patient/${appt.patient.id}`).then(({ data }) => {
       setPrescriptions(data as any);
-    }).catch(() => {});
+    }).catch((e) => console.warn("Error loading prescriptions:", extractErrorMessage(e)));
   };
 
   const loadLabOrders = () => {
     if (!appt) return;
     api.get(`/clinical-records/${appt.patient.id}/lab-orders`).then(({ data }) => {
       setLabOrders(data as any);
-    }).catch(() => {});
+    }).catch((e) => console.warn("Error loading lab orders:", extractErrorMessage(e)));
   };
 
   const downloadPdf = async (id: string) => {
@@ -105,7 +118,7 @@ export default function AppointmentDetailPage() {
       a.download = `receta-${id.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch (e) { alert(extractErrorMessage(e)); }
   };
 
   const downloadAllPrescriptionsPdf = async () => {
@@ -118,7 +131,7 @@ export default function AppointmentDetailPage() {
       a.download = `recetas-completas-${appt.patient.id.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch (e) { alert(extractErrorMessage(e)); }
   };
 
   const downloadLabOrderPdf = async (orderId: string) => {
@@ -130,7 +143,7 @@ export default function AppointmentDetailPage() {
       a.download = `solicitud-estudio-${orderId.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch (e) { alert(extractErrorMessage(e)); }
   };
 
   useEffect(load, [id]);
@@ -139,16 +152,45 @@ export default function AppointmentDetailPage() {
 
   const doAction = async (action: string) => {
     if (!id) return;
+    const confirmMsg: Record<string, string> = {
+      cancel: "¿Seguro que deseas cancelar esta cita?",
+      "no-show": "¿Seguro que deseas marcar esta cita como inasistencia?",
+    };
+    if (confirmMsg[action] && !window.confirm(confirmMsg[action])) return;
     setError(null);
     try {
       if (action === "check-in") {
         await api.patch(`/appointments/${id}`, { status: "CHECKED_IN" });
+      } else if (action === "set-payment-pending") {
+        await api.patch(`/appointments/${id}`, { status: "PAYMENT_PENDING_VALIDATION" });
       } else {
         await api.patch(`/appointments/${id}/${action}`);
       }
       load();
     } catch (err) {
       setError(extractErrorMessage(err));
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!id || !rescheduleDate || !rescheduleTime) return;
+    setSavingReschedule(true);
+    setError(null);
+    try {
+      const dt = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
+      const duration = new Date(appt!.endsAt).getTime() - new Date(appt!.startsAt).getTime();
+      const endsAt = new Date(dt.getTime() + duration).toISOString();
+      await api.patch(`/appointments/${id}`, {
+        startsAt: dt.toISOString(),
+        endsAt,
+        reason: rescheduleReason || appt?.reason || undefined,
+      });
+      setShowReschedule(false);
+      load();
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setSavingReschedule(false);
     }
   };
 
@@ -219,6 +261,50 @@ export default function AppointmentDetailPage() {
                 {a.label}
               </button>
             ))}
+            {(appt.status === "SCHEDULED" || appt.status === "CHECKED_IN") && (
+              <button
+                onClick={() => {
+                  const starts = new Date(appt.startsAt);
+                  setRescheduleDate(starts.toISOString().slice(0, 10));
+                  setRescheduleTime(starts.toTimeString().slice(0, 5));
+                  setRescheduleReason("");
+                  setShowReschedule(true);
+                }}
+                className="btn-secondary"
+              >
+                Reprogramar
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showReschedule && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowReschedule(false)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-ink-900 mb-4">Reprogramar cita</h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Nueva fecha</label>
+                  <input type="date" className="input" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">Nueva hora</label>
+                  <input type="time" className="input" value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="label">Motivo del cambio</label>
+                <input className="input" value={rescheduleReason} onChange={(e) => setRescheduleReason(e.target.value)} placeholder="Opcional" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={handleReschedule} disabled={savingReschedule || !rescheduleDate || !rescheduleTime} className="btn-primary flex-1">
+                {savingReschedule ? "Guardando..." : "Reprogramar"}
+              </button>
+              <button onClick={() => setShowReschedule(false)} className="btn-secondary">Cancelar</button>
+            </div>
           </div>
         </div>
       )}

@@ -3,10 +3,8 @@ import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom"
 import { api, extractErrorMessage } from "@/lib/api";
 
 const STUDY_TYPES = [
-  { value: "BLOOD", label: "Sangre" },
-  { value: "URINE", label: "Orina" },
-  { value: "STOOL", label: "Heces" },
-  { value: "IMAGE", label: "Imagen" },
+  { value: "LABORATORY", label: "Laboratorio" },
+  { value: "IMAGING", label: "Imagen" },
   { value: "PATHOLOGY", label: "Patologia" },
   { value: "OTHER", label: "Otro" },
 ];

@@ -66,4 +66,9 @@ export class PaymentFilterDto {
   @IsOptional()
   @IsEnum(["CASH", "POS", "SPEI", "MERCADO_PAGO", "TRANSFER", "OTHER"])
   method?: PaymentMethod;
+
+  @ApiPropertyOptional({ description: "Filtrar por fecha (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsString()
+  date?: string;
 }

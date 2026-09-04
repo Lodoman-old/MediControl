@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { api } from "@/lib/api";
+import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { appointmentStatusLabel } from "@/lib/roles";
 
@@ -63,6 +63,7 @@ export default function AgendaPage() {
   });
 
   const canCreate = user?.roles.includes("ADMIN") || user?.roles.includes("RECEPTION") || user?.roles.includes("SUPERADMIN");
+  const canTriage = user?.roles.includes("ADMIN") || user?.roles.includes("NURSE") || user?.roles.includes("SUPERADMIN");
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -88,9 +89,7 @@ export default function AgendaPage() {
 
       {error && (
         <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg">
-          <p className="text-sm text-danger-700">
-            {error instanceof Error ? error.message : "Error al cargar agenda"}
-          </p>
+          <p className="text-sm text-danger-700">{extractErrorMessage(error)}</p>
         </div>
       )}
 
@@ -161,12 +160,22 @@ export default function AgendaPage() {
                   </td>
                   <td className="px-4 py-3 text-ink-600">{a.locationName ?? a.branchName ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => navigate(`/appointments/${a.id}`)}
-                      className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate(`/appointments/${a.id}`)}
+                        className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                      >
+                        Editar
+                      </button>
+                      {canTriage && a.status === "CHECKED_IN" && (
+                        <button
+                          onClick={() => navigate("/triage")}
+                          className="text-teal-600 hover:text-teal-800 text-sm font-medium"
+                        >
+                          Triage
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

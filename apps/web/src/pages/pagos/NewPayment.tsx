@@ -42,6 +42,7 @@ const METHODS = [
   { value: "POS", label: "Terminal" },
   { value: "SPEI", label: "Transferencia SPEI" },
   { value: "TRANSFER", label: "Transferencia" },
+  { value: "MERCADO_PAGO", label: "MercadoPago" },
   { value: "OTHER", label: "Otro" },
 ];
 
@@ -73,6 +74,10 @@ export default function NewPaymentPage() {
     setError("");
     if (!branchId || !patientId || !amount) {
       setError("Completa todos los campos requeridos");
+      return;
+    }
+    if (parseFloat(amount) <= 0) {
+      setError("El monto debe ser mayor a 0");
       return;
     }
     mutation.mutate({
@@ -125,7 +130,7 @@ export default function NewPaymentPage() {
           <input
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="input"

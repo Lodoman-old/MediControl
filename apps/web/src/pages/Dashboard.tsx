@@ -70,11 +70,11 @@ export default function DashboardPage() {
   }, [meQuery.data, setUser]);
 
   useEffect(() => {
-    if (meQuery.isError) {
+    if ((meQuery.error as any)?.response?.status === 401) {
       useAuthStore.getState().clear();
       navigate("/login", { replace: true });
     }
-  }, [meQuery.isError, navigate]);
+  }, [meQuery.error, navigate]);
 
   const stats = statsQuery.data;
 

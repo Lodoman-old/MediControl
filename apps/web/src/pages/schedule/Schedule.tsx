@@ -17,6 +17,16 @@ interface ScheduleEntry {
   maxPatients: number | null;
 }
 
+interface ScheduleException {
+  id: string;
+  doctorId: string;
+  exceptionDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  isAvailable: boolean;
+  reason: string | null;
+}
+
 interface ScheduleMap {
   [dayOfWeek: number]: ScheduleEntry[];
 }
@@ -28,10 +38,20 @@ export default function SchedulePage() {
   const currentUser = useAuthStore((s) => s.user);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
+  const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [editDay, setEditDay] = useState<number | null>(null);
   const [editSchedule, setEditSchedule] = useState<ScheduleEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"schedule" | "exceptions">("schedule");
+
+  // Exception form
+  const [excDate, setExcDate] = useState("");
+  const [excStartTime, setExcStartTime] = useState("");
+  const [excEndTime, setExcEndTime] = useState("");
+  const [excIsAvailable, setExcIsAvailable] = useState(false);
+  const [excReason, setExcReason] = useState("");
+  const [savingExc, setSavingExc] = useState(false);
 
   const [form, setForm] = useState({
     startTime: "09:00",
@@ -59,10 +79,54 @@ export default function SchedulePage() {
       api.get(`/schedule?doctorId=${selectedDoctor}`).then(({ data }) => {
         setSchedules(Array.isArray(data) ? data : []);
       }).catch(() => setSchedules([]));
+      fetchExceptions();
     } else {
       setSchedules([]);
+      setExceptions([]);
     }
   }, [selectedDoctor]);
+
+  const fetchExceptions = async () => {
+    if (!selectedDoctor) return;
+    try {
+      const { data } = await api.get(`/schedule/exceptions?doctorId=${selectedDoctor}`);
+      setExceptions(Array.isArray(data) ? data : []);
+    } catch {
+      setExceptions([]);
+    }
+  };
+
+  const createException = async () => {
+    if (!selectedDoctor || !excDate) return;
+    setSavingExc(true);
+    setError(null);
+    try {
+      await api.post("/schedule/exceptions", {
+        doctorId: selectedDoctor,
+        exceptionDate: excDate,
+        startTime: excStartTime || undefined,
+        endTime: excEndTime || undefined,
+        isAvailable: excIsAvailable,
+        reason: excReason || undefined,
+      });
+      setExcDate(""); setExcStartTime(""); setExcEndTime(""); setExcIsAvailable(false); setExcReason("");
+      await fetchExceptions();
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setSavingExc(false);
+    }
+  };
+
+  const deleteException = async (id: string) => {
+    if (!confirm("Eliminar esta excepcion?")) return;
+    try {
+      await api.delete(`/schedule/exceptions/${id}`);
+      setExceptions((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    }
+  };
 
   const schedByDay: ScheduleMap = {};
   for (const s of schedules) {
@@ -166,51 +230,133 @@ export default function SchedulePage() {
       </div>
 
       {selectedDoctor && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {DAYS.map((day) => {
-            const dayScheds = schedByDay[day] ?? [];
-            return (
-              <div key={day} className="card">
-                <h3 className="font-semibold text-ink-900 mb-3">{DAY_NAMES[day]}</h3>
-                {dayScheds.length === 0 ? (
-                  <p className="text-sm text-ink-400 mb-3">Libre</p>
-                ) : (
-                  <div className="space-y-2 mb-3">
-                    {dayScheds.map((s) => (
-                      <div key={s.id} className="p-2 rounded bg-ink-50 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-ink-700">
-                            {s.startTime} - {s.endTime}
-                          </span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${
-                            s.isActive ? "bg-success-100 text-success-700" : "bg-warning-100 text-warning-700"
-                          }`}>
-                            {s.isActive ? "Activo" : "Inactivo"}
-                          </span>
-                        </div>
-                        {s.maxPatients && (
-                          <p className="text-xs text-ink-400 mt-1">max {s.maxPatients} pacientes</p>
-                        )}
-                        <div className="flex gap-2 mt-1">
-                          <button onClick={() => openEdit(s)} className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
-                          <button onClick={() => toggleActive(s)} className="text-xs text-ink-500 hover:text-ink-700">
-                            {s.isActive ? "Desactivar" : "Activar"}
-                          </button>
-                          <button onClick={() => deleteSchedule(s.id)} className="text-xs text-danger-600 hover:text-danger-800">Eliminar</button>
-                        </div>
+        <>
+          <div className="flex gap-2 border-b border-ink-200 pb-2">
+            <button onClick={() => setTab("schedule")} className={`px-3 py-1 text-sm font-medium rounded ${tab === "schedule" ? "bg-primary-100 text-primary-700" : "text-ink-500 hover:text-ink-700"}`}>Horarios</button>
+            <button onClick={() => setTab("exceptions")} className={`px-3 py-1 text-sm font-medium rounded ${tab === "exceptions" ? "bg-primary-100 text-primary-700" : "text-ink-500 hover:text-ink-700"}`}>Excepciones</button>
+          </div>
+
+          {tab === "schedule" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {DAYS.map((day) => {
+                const dayScheds = schedByDay[day] ?? [];
+                return (
+                  <div key={day} className="card">
+                    <h3 className="font-semibold text-ink-900 mb-3">{DAY_NAMES[day]}</h3>
+                    {dayScheds.length === 0 ? (
+                      <p className="text-sm text-ink-400 mb-3">Libre</p>
+                    ) : (
+                      <div className="space-y-2 mb-3">
+                        {dayScheds.map((s) => (
+                          <div key={s.id} className="p-2 rounded bg-ink-50 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono text-ink-700">
+                                {s.startTime} - {s.endTime}
+                              </span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                s.isActive ? "bg-success-100 text-success-700" : "bg-warning-100 text-warning-700"
+                              }`}>
+                                {s.isActive ? "Activo" : "Inactivo"}
+                              </span>
+                            </div>
+                            {s.maxPatients && (
+                              <p className="text-xs text-ink-400 mt-1">max {s.maxPatients} pacientes</p>
+                            )}
+                            <div className="flex gap-2 mt-1">
+                              <button onClick={() => openEdit(s)} className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
+                              <button onClick={() => toggleActive(s)} className="text-xs text-ink-500 hover:text-ink-700">
+                                {s.isActive ? "Desactivar" : "Activar"}
+                              </button>
+                              <button onClick={() => deleteSchedule(s.id)} className="text-xs text-danger-600 hover:text-danger-800">Eliminar</button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                    {!dayScheds.some((s) => s.dayOfWeek === day && editDay === day) && (
+                      <button onClick={() => openAdd(day)} className="btn-secondary text-xs w-full">
+                        {dayScheds.length === 0 ? "Agregar horario" : "Agregar otro"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === "exceptions" && (
+            <div className="space-y-6">
+              <div className="card space-y-4 max-w-lg">
+                <h3 className="font-semibold text-ink-900">Nueva excepcion (vacacion / bloqueo)</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Fecha</label>
+                    <input type="date" className="input" value={excDate} onChange={(e) => setExcDate(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label className="label">Disponible?</label>
+                    <select className="input" value={excIsAvailable ? "true" : "false"} onChange={(e) => setExcIsAvailable(e.target.value === "true")}>
+                      <option value="false">No disponible (bloqueado)</option>
+                      <option value="true">Disponible (horario especial)</option>
+                    </select>
+                  </div>
+                </div>
+                {excIsAvailable && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Hora inicio</label>
+                      <input type="time" className="input" value={excStartTime} onChange={(e) => setExcStartTime(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="label">Hora fin</label>
+                      <input type="time" className="input" value={excEndTime} onChange={(e) => setExcEndTime(e.target.value)} />
+                    </div>
                   </div>
                 )}
-                {!dayScheds.some((s) => s.dayOfWeek === day && editDay === day) && (
-                  <button onClick={() => openAdd(day)} className="btn-secondary text-xs w-full">
-                    {dayScheds.length === 0 ? "Agregar horario" : "Agregar otro"}
-                  </button>
-                )}
+                <div>
+                  <label className="label">Motivo (opcional)</label>
+                  <input className="input" value={excReason} onChange={(e) => setExcReason(e.target.value)} placeholder="Ej: Vacaciones, capacitacion..." />
+                </div>
+                <button onClick={createException} disabled={savingExc || !excDate} className="btn-primary">
+                  {savingExc ? "Guardando..." : "Agregar excepcion"}
+                </button>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="card p-0 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-ink-50 text-ink-600 text-left">
+                    <th className="px-4 py-3 font-medium">Fecha</th>
+                    <th className="px-4 py-3 font-medium">Estado</th>
+                    <th className="px-4 py-3 font-medium">Horario</th>
+                    <th className="px-4 py-3 font-medium">Motivo</th>
+                    <th className="px-4 py-3 font-medium"></th>
+                  </tr></thead>
+                  <tbody>
+                    {exceptions.length === 0 ? (
+                      <tr><td colSpan={5} className="px-4 py-6 text-center text-ink-400">No hay excepciones registradas</td></tr>
+                    ) : exceptions.map((exc) => (
+                      <tr key={exc.id} className="border-t border-ink-100">
+                        <td className="px-4 py-3 font-medium">{exc.exceptionDate?.slice(0, 10)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`badge ${exc.isAvailable ? "bg-success-100 text-success-700" : "bg-danger-100 text-danger-700"}`}>
+                            {exc.isAvailable ? "Disponible" : "Bloqueado"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-ink-600">
+                          {exc.startTime && exc.endTime ? `${exc.startTime} - ${exc.endTime}` : "Todo el dia"}
+                        </td>
+                        <td className="px-4 py-3 text-ink-500">{exc.reason ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => deleteException(exc.id)} className="text-xs text-danger-600 hover:text-danger-800">Eliminar</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {editDay !== null && (

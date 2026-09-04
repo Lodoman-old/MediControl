@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface RevenueReport {
   from: string; to: string; total: number; count: number;
@@ -30,9 +32,15 @@ const STATUS_LABEL: Record<string, string> = {
 function currency(n: number) { return "$" + n.toLocaleString("es-MX", { minimumFractionDigits: 2 }); }
 
 export default function ReportesPage() {
+  const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState<"revenue" | "appointments" | "patients" | "doctors">("revenue");
   const [from, setFrom] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd"));
   const [to, setTo] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  const isAdmin = user?.roles.includes("SUPERADMIN") || user?.roles.includes("ADMIN");
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const rev = useQuery({
     queryKey: ["reports", "revenue", from, to],

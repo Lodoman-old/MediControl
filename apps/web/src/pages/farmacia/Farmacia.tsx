@@ -58,6 +58,11 @@ async function createBatch(body: { medicationId: string; batchNumber: string; ex
   return data;
 }
 
+async function updateMedication(id: string, body: { name?: string; barcode?: string; presentation?: string; price?: number; requiresPrescription?: boolean; activeIngredient?: string; concentration?: string; familyId?: string }) {
+  const { data } = await api.patch(`/pharmacy/medications/${id}`, body);
+  return data;
+}
+
 export default function FarmaciaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -66,6 +71,7 @@ export default function FarmaciaPage() {
   const isAdmin = roles.includes("ADMIN") || roles.includes("SUPERADMIN");
   const [tab, setTab] = useState<"meds" | "batches">("meds");
   const [showForm, setShowForm] = useState(false);
+  const [editingMed, setEditingMed] = useState<Medication | null>(null);
   const [error, setError] = useState("");
   const [branchId, setBranchId] = useState<string>(user?.branchId ?? "");
   const [familyFilter, setFamilyFilter] = useState("");
@@ -109,11 +115,36 @@ export default function FarmaciaPage() {
     onError: (e) => setError(extractErrorMessage(e)),
   });
 
+  const updateMed = useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Parameters<typeof updateMedication>[1]) => updateMedication(id, body),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["pharmacy", "medications"] }); setEditingMed(null); resetForm(); },
+    onError: (e) => setError(extractErrorMessage(e)),
+  });
+
   const resetForm = () => { setSku(""); setBarcode(""); setName(""); setPres(""); setPrice(""); setIngredient(""); setConc(""); setReqRx(false); setFamilyId(""); setMedId(""); setBatchNum(""); setExpiry(""); setInitStock(""); setError(""); };
+
+  const handleEditClick = (med: Medication) => {
+    setEditingMed(med);
+    setSku(med.sku);
+    setBarcode(med.barcode ?? "");
+    setName(med.name);
+    setPres(med.presentation);
+    setPrice(String(med.price));
+    setIngredient(med.activeIngredient ?? "");
+    setConc(med.concentration ?? "");
+    setReqRx(med.requiresPrescription);
+    setFamilyId(med.family?.id ?? "");
+    setShowForm(true);
+    setError("");
+  };
 
   const handleMedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMed.mutate({ sku, barcode: barcode || undefined, name, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined } as any);
+    if (editingMed) {
+      updateMed.mutate({ id: editingMed.id, name, barcode: barcode || undefined, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined });
+    } else {
+      createMed.mutate({ sku, barcode: barcode || undefined, name, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined } as any);
+    }
   };
 
   const handleBatchSubmit = (e: React.FormEvent) => {
@@ -128,7 +159,7 @@ export default function FarmaciaPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-ink-900">Farmacia</h2>
         <div className="flex gap-3">
-          {tab === "meds" && <button onClick={() => { setShowForm(!showForm); setError(""); }} className="btn-primary">{showForm ? "Cancelar" : "Nuevo medicamento"}</button>}
+          {tab === "meds" && <button onClick={() => { setShowForm(!showForm); setEditingMed(null); setError(""); resetForm(); }} className="btn-primary">{showForm ? "Cancelar" : "Nuevo medicamento"}</button>}
           {tab === "batches" && <button onClick={() => { setShowForm(!showForm); setError(""); }} className="btn-primary">{showForm ? "Cancelar" : "Nuevo lote"}</button>}
           <button onClick={() => navigate("/farmacia/pos")} className="btn-primary">POS / Vender</button>
           <button onClick={() => navigate("/farmacia/caja")} className="btn-secondary">Caja</button>
@@ -159,6 +190,7 @@ export default function FarmaciaPage() {
 
       {showForm && tab === "meds" && (
         <form onSubmit={handleMedSubmit} className="card space-y-3 max-w-lg">
+          <h3 className="font-semibold text-ink-900">{editingMed ? "Editar medicamento" : "Nuevo medicamento"}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">SKU</label><input value={sku} onChange={e => setSku(e.target.value)} className="input" required /></div>
             <div><label className="label">Codigo de barras</label><input value={barcode} onChange={e => setBarcode(e.target.value)} className="input" placeholder="EAN-13" /></div>
@@ -179,7 +211,7 @@ export default function FarmaciaPage() {
             </select>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reqRx} onChange={e => setReqRx(e.target.checked)} className="rounded" /> Requiere receta</label>
-          <button type="submit" disabled={createMed.isPending} className="btn-primary">{createMed.isPending ? "Guardando..." : "Guardar medicamento"}</button>
+          <button type="submit" disabled={createMed.isPending || updateMed.isPending} className="btn-primary">{editingMed ? (updateMed.isPending ? "Actualizando..." : "Actualizar") : (createMed.isPending ? "Guardando..." : "Guardar medicamento")}</button>
         </form>
       )}
 
@@ -205,7 +237,7 @@ export default function FarmaciaPage() {
             <thead><tr className="bg-ink-50 text-ink-600 text-left">
               <th className="px-4 py-3 font-medium">Codigo barras</th><th className="px-4 py-3 font-medium">SKU</th><th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Familia</th><th className="px-4 py-3 font-medium">Presentacion</th><th className="px-4 py-3 font-medium">Precio</th>
-              <th className="px-4 py-3 font-medium">Rx</th>
+              <th className="px-4 py-3 font-medium">Rx</th><th className="px-4 py-3 font-medium"></th>
             </tr></thead>
             <tbody>{filteredMeds.map(m => <tr key={m.id} className="border-t border-ink-100 hover:bg-ink-50">
               <td className="px-4 py-3 font-mono text-xs text-ink-500">{m.barcode ?? "—"}</td>
@@ -215,6 +247,7 @@ export default function FarmaciaPage() {
               <td className="px-4 py-3 text-ink-600">{m.presentation}</td>
               <td className="px-4 py-3 font-mono">${Number(m.price).toLocaleString("es-MX")}</td>
               <td className="px-4 py-3">{m.requiresPrescription ? <span className="badge bg-yellow-100 text-yellow-700">Receta</span> : <span className="text-ink-400">Libre</span>}</td>
+              <td className="px-4 py-3"><button onClick={() => handleEditClick(m)} className="text-primary-600 hover:text-primary-800 text-sm font-medium">Editar</button></td>
             </tr>)}</tbody>
           </table>
         </div>

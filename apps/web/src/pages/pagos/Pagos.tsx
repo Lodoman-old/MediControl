@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { api } from "@/lib/api";
+import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { methodLabel, statusLabel } from "@/lib/roles";
 
@@ -28,8 +28,8 @@ interface DailySummary {
   byMethod: Record<string, number>;
 }
 
-async function fetchPayments(): Promise<Payment[]> {
-  const { data } = await api.get<Payment[]>("/payments");
+async function fetchPayments(date: string): Promise<Payment[]> {
+  const { data } = await api.get<Payment[]>("/payments", { params: { date } });
   return data;
 }
 
@@ -61,8 +61,8 @@ export default function PagosPage() {
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
   const { data: payments, isLoading, error } = useQuery({
-    queryKey: ["payments"],
-    queryFn: fetchPayments,
+    queryKey: ["payments", date],
+    queryFn: () => fetchPayments(date),
   });
 
   const { data: summary } = useQuery({
@@ -118,9 +118,7 @@ export default function PagosPage() {
 
       {error && (
         <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg">
-          <p className="text-sm text-danger-700">
-            {error instanceof Error ? error.message : "Error al cargar pagos"}
-          </p>
+          <p className="text-sm text-danger-700">{extractErrorMessage(error)}</p>
         </div>
       )}
 

@@ -29,6 +29,7 @@ import NewPrescriptionPage from "@/pages/expediente/NewPrescription";
 import MedicalHistoryPage from "@/pages/expediente/MedicalHistory";
 import PagosPage from "@/pages/pagos/Pagos";
 import NewPaymentPage from "@/pages/pagos/NewPayment";
+import PaymentDetailPage from "@/pages/pagos/PaymentDetail";
 import FarmaciaPage from "@/pages/farmacia/Farmacia";
 import POSPage from "@/pages/farmacia/POS";
 import SalesHistoryPage from "@/pages/farmacia/SalesHistory";
@@ -37,17 +38,17 @@ import InventoryAdjustmentPage from "@/pages/farmacia/InventoryAdjustment";
 import CashRegisterPage from "@/pages/farmacia/CashRegister";
 import ReportesPage from "@/pages/reportes/Reportes";
 import ReportSchedulesPage from "@/pages/reportes/ReportSchedules";
+import DescargarAppPage from "@/pages/DescargarApp";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function App() {
-  usePushNotifications();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/descargar" element={<DescargarAppPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route
         path="/dashboard"
@@ -262,6 +263,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <NewPaymentPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/pagos/:id"
+        element={
+          <ProtectedLayout>
+            <PaymentDetailPage />
           </ProtectedLayout>
         }
       />

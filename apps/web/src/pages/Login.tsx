@@ -61,7 +61,7 @@ export default function LoginPage() {
     } else {
       setCheckingSession(false);
     }
-  }, []);
+  }, [isAuthed, user, navigate, location.state]);
 
   useEffect(() => {
     (async () => {
@@ -69,6 +69,24 @@ export default function LoginPage() {
       try {
         const result = await BiometricAuth.isAvailable();
         setBioAvailable(result.available);
+        if (result.available) {
+          const { data } = await Preferences.get({ key: BIOMETRIC_KEY });
+          if (data) {
+            const creds = JSON.parse(data) as { email: string; password: string };
+            setValue("email", creds.email);
+            setValue("password", creds.password);
+            setTimeout(async () => {
+              const authResult = await BiometricAuth.authenticate({
+                reason: "Ingresa con tu huella digital para acceder a MediControl",
+                cancelTitle: "Cancelar",
+                allowDeviceCredential: true,
+              });
+              if (authResult.authenticated) {
+                doLogin(creds);
+              }
+            }, 200);
+          }
+        }
       } catch { setBioAvailable(false); }
       setBioChecking(false);
     })();
