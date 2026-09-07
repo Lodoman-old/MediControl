@@ -162,6 +162,10 @@ export class PharmacyService {
         const med = await tx.medication.findFirst({ where: { id: medicationId, organizationId } });
         if (!med) throw new NotFoundException(`Medicamento ${medicationId} no encontrado`);
 
+        if (med.requiresPrescription && !prescriptionId) {
+          throw new BadRequestException(`El medicamento "${med.name}" requiere receta medica. Vincula una receta para dispensarlo.`);
+        }
+
         if (batchId) {
           const batch = await tx.inventoryBatch.findFirst({ where: { id: batchId, organizationId } });
           if (!batch) throw new NotFoundException(`Lote ${batchId} no encontrado`);

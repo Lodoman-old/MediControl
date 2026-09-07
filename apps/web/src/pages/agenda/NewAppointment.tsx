@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
+import QuickPatientModal from "./QuickPatientModal";
 
 interface Doctor {
   id: string;
@@ -110,6 +111,7 @@ export default function NewAppointmentPage() {
   const [startTime, setStartTime] = useState("");
   const [reason, setReason] = useState("");
   const [price, setPrice] = useState(0);
+  const [showQuickPatient, setShowQuickPatient] = useState(false);
 
   useEffect(() => {
     api.get("/admin/users?limit=100&role=DOCTOR").then((r) => {
@@ -268,7 +270,12 @@ export default function NewAppointmentPage() {
               />
             </div>
             <div>
-              <label className="label">Paciente</label>
+              <div className="flex items-center gap-2">
+                <label className="label">Paciente</label>
+                <button type="button" onClick={() => setShowQuickPatient(true)} className="text-xs text-primary-600 hover:text-primary-800 font-medium">
+                  + Nuevo
+                </button>
+              </div>
               <SearchableSelect
                 items={patients}
                 value={patientId}
@@ -350,6 +357,15 @@ export default function NewAppointmentPage() {
           </div>
         </form>
       </div>
+
+      <QuickPatientModal
+        open={showQuickPatient}
+        onClose={() => setShowQuickPatient(false)}
+        onCreated={(p) => {
+          setPatients((prev) => [...prev, p]);
+          setPatientId(p.id);
+        }}
+      />
     </div>
   );
 }

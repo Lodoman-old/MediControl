@@ -48,6 +48,9 @@ interface AppointmentDetail {
 const STATUS_ACTIONS: Record<string, { label: string; action: string; role: string }[]> = {
   SCHEDULED: [
     { label: "Registrar entrada", action: "check-in", role: "RECEPTION" },
+    { label: "Cobrar consulta", action: "charge", role: "RECEPTION" },
+    { label: "Cobrar consulta", action: "charge", role: "ADMIN" },
+    { label: "Cobrar consulta", action: "charge", role: "DOCTOR" },
     { label: "Pendiente validacion pago", action: "set-payment-pending", role: "ADMIN" },
     { label: "Pendiente validacion pago", action: "set-payment-pending", role: "RECEPTION" },
     { label: "Cancelar cita", action: "cancel", role: "ADMIN" },
@@ -55,7 +58,16 @@ const STATUS_ACTIONS: Record<string, { label: string; action: string; role: stri
   ],
   CHECKED_IN: [
     { label: "Iniciar consulta", action: "start-consult", role: "DOCTOR" },
+    { label: "Cobrar consulta", action: "charge", role: "RECEPTION" },
+    { label: "Cobrar consulta", action: "charge", role: "ADMIN" },
     { label: "Marcar inasistencia", action: "no-show", role: "DOCTOR" },
+    { label: "Cancelar cita", action: "cancel", role: "ADMIN" },
+    { label: "Cancelar cita", action: "cancel", role: "SUPERADMIN" },
+  ],
+  PAYMENT_PENDING_VALIDATION: [
+    { label: "Cobrar consulta", action: "charge", role: "RECEPTION" },
+    { label: "Cobrar consulta", action: "charge", role: "ADMIN" },
+    { label: "Cobrar consulta", action: "charge", role: "DOCTOR" },
     { label: "Cancelar cita", action: "cancel", role: "ADMIN" },
     { label: "Cancelar cita", action: "cancel", role: "SUPERADMIN" },
   ],
@@ -163,6 +175,9 @@ export default function AppointmentDetailPage() {
         await api.patch(`/appointments/${id}`, { status: "CHECKED_IN" });
       } else if (action === "set-payment-pending") {
         await api.patch(`/appointments/${id}`, { status: "PAYMENT_PENDING_VALIDATION" });
+      } else if (action === "charge") {
+        navigate(`/pagos/nuevo?appointmentId=${appt!.id}&patientId=${appt!.patient.id}&amount=${appt!.priceQuoted}`);
+        return;
       } else {
         await api.patch(`/appointments/${id}/${action}`);
       }

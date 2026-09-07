@@ -110,6 +110,10 @@ export default function POSPage() {
   const addToCart = (medId: string) => {
     const med = meds?.find(m => m.id === medId);
     if (!med) return;
+    if (med.requiresPrescription && !prescriptionId) {
+      setError(`"${med.name}" requiere receta medica. Vincula una receta desde Expediente.`);
+      return;
+    }
     const batch = batches?.find(b => b.medicationId === medId && b.currentStock > 0);
     if (!batch) { setError("Sin stock disponible"); return; }
     setCart(prev => [...prev, { medId, batchId: batch.id, qty: 1, price: Number(med.price), name: med.name, prescriptionId }]);

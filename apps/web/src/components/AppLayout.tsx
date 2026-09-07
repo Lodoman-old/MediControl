@@ -143,7 +143,7 @@ export default function AppLayout({ children }: Props) {
         </Dropdown>
       )}
 
-      {(isDoctor || isAdmin) && (
+      {(isDoctor || isAdmin || isReception) && (
         <Link to="/pagos" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
           Pagos
         </Link>
@@ -211,7 +211,7 @@ export default function AppLayout({ children }: Props) {
         </>
       )}
 
-      {(isDoctor || isAdmin) && (
+      {(isDoctor || isAdmin || isReception) && (
         <MobileNavLink to="/pagos">Pagos</MobileNavLink>
       )}
 

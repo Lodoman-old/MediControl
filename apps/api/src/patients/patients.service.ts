@@ -3,6 +3,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import type { UpdatePatientProfileDto } from "../auth/dto/register.dto";
 import { hash as argonHash } from "@node-rs/argon2";
 import type { CreatePatientByStaffDto } from "./dto/create-patient-staff.dto";
+import type { QuickCreatePatientDto } from "./dto/quick-create-patient.dto";
+import { randomBytes } from "crypto";
 
 @Injectable()
 export class PatientsService {
@@ -82,6 +84,73 @@ export class PatientsService {
       mrn: result.patient.mrn,
       fullName: `${result.person.firstName} ${result.person.lastNameP}${result.person.lastNameM ? " " + result.person.lastNameM : ""}`,
       email: result.user.email,
+      phone: result.user.phoneE164,
+    };
+  }
+
+  async quickCreatePatient(organizationId: string, dto: QuickCreatePatientDto) {
+    const tempEmail = `temp+${randomBytes(8).toString("hex")}@medicontrol.local`;
+    const tempPassword = randomBytes(12).toString("base64url");
+    const passwordHash = await argonHash(tempPassword);
+    const mrn = await this.generateMrn(organizationId);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const person = await tx.person.create({
+        data: {
+          organizationId,
+          firstName: dto.firstName,
+          lastNameP: dto.lastNameP,
+          lastNameM: dto.lastNameM ?? null,
+          birthDate: new Date(dto.birthDate),
+          gender: dto.gender as any,
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          organizationId,
+          personId: person.id,
+          email: tempEmail,
+          phoneE164: dto.phone,
+          passwordHash,
+          status: "ACTIVE",
+          mustChangePassword: true,
+        },
+      });
+
+      const patient = await tx.patient.create({
+        data: {
+          organizationId,
+          userId: user.id,
+          personId: person.id,
+          mrn,
+          preferredLanguage: "es-MX",
+          consentPrivacyAt: new Date(),
+        },
+      });
+
+      const patientRole = await tx.role.findFirst({
+        where: { organizationId, code: "PATIENT" },
+      });
+      if (patientRole) {
+        await tx.userRole.create({
+          data: {
+            organizationId,
+            userId: user.id,
+            roleId: patientRole.id,
+          },
+        });
+      }
+
+      return { person, user, patient };
+    });
+
+    this.logger.log(`Paciente rapido creado: ${result.patient.id} (${dto.firstName} ${dto.lastNameP})`);
+
+    return {
+      id: result.patient.id,
+      mrn: result.patient.mrn,
+      fullName: `${result.person.firstName} ${result.person.lastNameP}${result.person.lastNameM ? " " + result.person.lastNameM : ""}`,
       phone: result.user.phoneE164,
     };
   }

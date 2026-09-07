@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
@@ -31,6 +31,7 @@ async function createPayment(body: {
   amount: number;
   method: string;
   currency?: string;
+  appointmentId?: string;
   notes?: string;
 }) {
   const { data } = await api.post("/payments", body);
@@ -48,10 +49,16 @@ const METHODS = [
 
 export default function NewPaymentPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+  const appointmentId = searchParams.get("appointmentId") ?? "";
+  const initialPatientId = searchParams.get("patientId") ?? "";
+  const initialAmount = searchParams.get("amount") ?? "";
+  const fromAppointment = !!appointmentId;
+
   const [branchId, setBranchId] = useState(user?.branchId ?? "");
-  const [patientId, setPatientId] = useState("");
-  const [amount, setAmount] = useState("");
+  const [patientId, setPatientId] = useState(initialPatientId);
+  const [amount, setAmount] = useState(initialAmount);
   const [method, setMethod] = useState("CASH");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
@@ -62,7 +69,11 @@ export default function NewPaymentPage() {
   const mutation = useMutation({
     mutationFn: createPayment,
     onSuccess: () => {
-      navigate("/pagos");
+      if (fromAppointment) {
+        navigate(`/appointments/${appointmentId}`);
+      } else {
+        navigate("/pagos");
+      }
     },
     onError: (err) => {
       setError(extractErrorMessage(err));
@@ -85,6 +96,7 @@ export default function NewPaymentPage() {
       patientId,
       amount: parseFloat(amount),
       method,
+      appointmentId: appointmentId || undefined,
       notes: notes || undefined,
     });
   };
@@ -104,6 +116,13 @@ export default function NewPaymentPage() {
         </div>
       )}
 
+      {fromAppointment && (
+        <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg">
+          <p className="text-sm text-primary-700 font-medium">Pago vinculado a una cita</p>
+          <p className="text-xs text-primary-600 mt-1">El pago se registrara automaticamente para esta cita y el estado cambiara a Pagado.</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="card space-y-4">
         <div>
           <label className="label">Sucursal</label>
@@ -117,12 +136,16 @@ export default function NewPaymentPage() {
 
         <div>
           <label className="label">Paciente</label>
-          <select value={patientId} onChange={(e) => setPatientId(e.target.value)} className="input" required>
-            <option value="">Seleccionar...</option>
-            {(patients ?? []).map((p) => (
-              <option key={p.id} value={p.id}>{p.person?.fullName ?? p.mrn}</option>
-            ))}
-          </select>
+          {fromAppointment ? (
+            <input type="text" className="input bg-ink-50" value={patientId} disabled />
+          ) : (
+            <select value={patientId} onChange={(e) => setPatientId(e.target.value)} className="input" required>
+              <option value="">Seleccionar...</option>
+              {(patients ?? []).map((p) => (
+                <option key={p.id} value={p.id}>{p.person?.fullName ?? p.mrn}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div>

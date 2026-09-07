@@ -6,6 +6,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { UpdatePatientProfileDto } from "../auth/dto/register.dto";
 import { CreatePatientByStaffDto } from "./dto/create-patient-staff.dto";
+import { QuickCreatePatientDto } from "./dto/quick-create-patient.dto";
 
 @ApiTags("Pacientes")
 @ApiBearerAuth()
@@ -22,6 +23,17 @@ export class PatientsController {
     @Body() dto: CreatePatientByStaffDto,
   ) {
     return this.patients.createPatientByStaff(user.organizationId, dto);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "RECEPTION", "DOCTOR")
+  @ApiOperation({ summary: "Crear paciente rapido", description: "Crea paciente sin email ni password. Genera MRN y credenciales temporales." })
+  @Post("quick")
+  @HttpCode(HttpStatus.CREATED)
+  async quickCreatePatient(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: QuickCreatePatientDto,
+  ) {
+    return this.patients.quickCreatePatient(user.organizationId, dto);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")

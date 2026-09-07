@@ -14,7 +14,7 @@ import type { Request } from "express";
 export class PaymentController {
   constructor(private readonly payment: PaymentService) {}
 
-  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")
   @ApiOperation({ summary: "Resumen de pagos del día" })
   @Get("summary/daily")
   async dailySummary(
@@ -31,21 +31,21 @@ export class PaymentController {
     return this.payment.handleMercadoPagoWebhook(req.body);
   }
 
-  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")
   @ApiOperation({ summary: "Registrar un pago" })
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePaymentDto) {
     return this.payment.create(user.organizationId, user.userId, dto);
   }
 
-  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")
   @ApiOperation({ summary: "Listar pagos" })
   @Get()
   async findAll(@CurrentUser() user: AuthenticatedUser, @Query() filters?: PaymentFilterDto) {
     return this.payment.findAll(user.organizationId, filters);
   }
 
-  @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")
   @ApiOperation({ summary: "Obtener detalle de pago" })
   @Get(":id")
   async findOne(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
