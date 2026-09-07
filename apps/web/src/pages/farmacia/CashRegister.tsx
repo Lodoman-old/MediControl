@@ -34,7 +34,7 @@ export default function CashRegisterPage() {
   const [notes, setNotes] = useState("");
   const [tab, setTab] = useState<"active" | "history">("active");
 
-  const { data: branches } = useQuery({
+  const { data: branches } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ["branches"],
     queryFn: () => api.get("/admin/branches").then(r => r.data?.data ?? r.data ?? []),
   });
@@ -55,13 +55,25 @@ export default function CashRegisterPage() {
     queryFn: async () => {
       if (!activeRegister) return null;
       const [salesRes, paymentsRes] = await Promise.all([
-        api.get("/pharmacy/sales", { params: { branchId: activeRegister.branchId } }).then(r => r.data ?? []),
-        api.get("/payments", { params: { branchId: activeRegister.branchId } }).then(r => r.data?.data ?? r.data ?? []),
+        api.get("/pharmacy/sales").then(r => r.data ?? []),
+        api.get("/payments").then(r => r.data?.data ?? r.data ?? []),
       ]);
       const openedAt = new Date(activeRegister.openedAt).getTime();
-      const salesTotal = (salesRes as any[]).filter((s: any) => new Date(s.createdAt).getTime() >= openedAt && s.status === "COMPLETED").reduce((sum: number, s: any) => sum + Number(s.total), 0);
-      const paymentsTotal = (paymentsRes as any[]).filter((p: any) => new Date(p.createdAt).getTime() >= openedAt && p.status === "COMPLETED").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-      return { salesTotal, paymentsTotal };
+      const sales = (salesRes as any[]).filter((s: any) => new Date(s.createdAt).getTime() >= openedAt && s.status === "COMPLETED");
+      const payments = (paymentsRes as any[]).filter((p: any) => new Date(p.createdAt).getTime() >= openedAt && p.status === "COMPLETED");
+
+      const salesTotal = sales.reduce((sum: number, s: any) => sum + Number(s.total), 0);
+      const paymentsTotal = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+
+      const byMethod: Record<string, number> = {};
+      for (const s of sales) {
+        byMethod[s.method] = (byMethod[s.method] ?? 0) + Number(s.total);
+      }
+      for (const p of payments) {
+        byMethod[p.method] = (byMethod[p.method] ?? 0) + Number(p.amount);
+      }
+
+      return { salesTotal, paymentsTotal, byMethod };
     },
     enabled: !!activeRegister,
   });
@@ -96,7 +108,7 @@ export default function CashRegisterPage() {
     e.preventDefault();
     setError("");
     if (!branches?.length) { setError("No hay sucursales disponibles"); return; }
-    const defaultBranchId = user?.branchId ?? branches[0].id;
+    const defaultBranchId = user?.branchId ?? (branches?.[0]?.id ?? "");
     openMutation.mutate({
       branchId: defaultBranchId,
       initialAmount: parseFloat(initialAmount) || 0,
@@ -139,7 +151,7 @@ export default function CashRegisterPage() {
           {!activeRegister ? (
             <form onSubmit={handleOpen} className="card space-y-4 max-w-md">
               <h3 className="text-lg font-semibold text-ink-900">Abrir caja</h3>
-              <p className="text-sm text-ink-500">Sucursal: {branches?.[0]?.name ?? "Consultorio Principal"}</p>
+              <p className="text-sm text-ink-500">Sucursal: {branches?.find((b: { id: string; name: string }) => b.id === user?.branchId)?.name ?? branches?.[0]?.name ?? "Consultorio Principal"}</p>
               <div>
                 <label className="label">Monto inicial (opcional)</label>
                 <input type="number" step="0.01" className="input" value={initialAmount}
@@ -158,7 +170,10 @@ export default function CashRegisterPage() {
             <div className="space-y-4">
               <div className="card">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-green-700">Caja abierta</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-700">Caja abierta</h3>
+                    <p className="text-xs text-ink-500">{branches?.find((b: { id: string; name: string }) => b.id === activeRegister.branchId)?.name ?? "Sucursal"}</p>
+                  </div>
                   <span className="badge bg-green-100 text-green-700 text-xs">
                     Abierta desde {format(new Date(activeRegister.openedAt), "HH:mm")}
                   </span>
@@ -178,6 +193,18 @@ export default function CashRegisterPage() {
                         <dd className="font-mono font-semibold text-primary-700">${breakdown.salesTotal.toFixed(2)}</dd></div>
                       <div><dt className="text-ink-500">Pagos consultas</dt>
                         <dd className="font-mono font-semibold text-primary-700">${breakdown.paymentsTotal.toFixed(2)}</dd></div>
+                      {Object.keys(breakdown.byMethod).length > 0 && (
+                        <div className="col-span-2">
+                          <dt className="text-ink-500 text-xs mb-1">Por metodo de pago</dt>
+                          <dd className="flex flex-wrap gap-2">
+                            {Object.entries(breakdown.byMethod).map(([method, amount]) => (
+                              <span key={method} className="inline-flex items-center gap-1 px-2 py-0.5 bg-ink-100 rounded text-xs font-mono">
+                                {method}: ${Number(amount).toFixed(2)}
+                              </span>
+                            ))}
+                          </dd>
+                        </div>
+                      )}
                     </>
                   )}
                   <div><dt className="text-ink-500">Ingresos estimados</dt>

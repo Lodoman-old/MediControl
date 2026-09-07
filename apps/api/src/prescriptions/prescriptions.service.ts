@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import type { CreatePrescriptionDto, UpdatePrescriptionDto, SignPrescriptionDto } from "./dto/prescriptions.dto";
 import PDFDocument from "pdfkit";
 
@@ -7,7 +8,10 @@ import PDFDocument from "pdfkit";
 export class PrescriptionsService {
   private readonly logger = new Logger(PrescriptionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(organizationId: string, userId: string, dto: CreatePrescriptionDto) {
     const patient = await this.prisma.patient.findFirst({
@@ -36,7 +40,7 @@ export class PrescriptionsService {
       medicationId = med.id;
     }
 
-    return this.prisma.prescription.create({
+    const rx = await this.prisma.prescription.create({
       data: {
         organizationId,
         medicalRecordId: dto.medicalRecordId ?? null,
@@ -56,8 +60,13 @@ export class PrescriptionsService {
       include: {
         patient: { include: { person: true } },
         doctor: { include: { person: true } },
+        medicationRef: true,
       },
     });
+
+    this.notifyPharmacy(organizationId, rx);
+
+    return rx;
   }
 
   async findByPatient(organizationId: string, patientId: string) {
@@ -528,5 +537,50 @@ export class PrescriptionsService {
       data: { status: "CANCELLED" },
     });
     return { deleted: true };
+  }
+
+  private async notifyPharmacy(
+    organizationId: string,
+    rx: { id: string; medication: string; quantity: number | null; patient: { person: { firstName: string; lastNameP: string } }; medicationRef: { name: string } | null },
+  ) {
+    try {
+      const cajeroRole = await this.prisma.role.findFirst({
+        where: { organizationId, code: "CAJERO" },
+      });
+      if (!cajeroRole) return;
+
+      const cajeros = await this.prisma.userRole.findMany({
+        where: { organizationId, roleId: cajeroRole.id },
+        select: { userId: true },
+      });
+
+      const adminRole = await this.prisma.role.findFirst({
+        where: { organizationId, code: "ADMIN" },
+      });
+      const admins = adminRole
+        ? await this.prisma.userRole.findMany({
+            where: { organizationId, roleId: adminRole.id },
+            select: { userId: true },
+          })
+        : [];
+
+      const userIds = [...new Set([...cajeros.map((c) => c.userId), ...admins.map((a) => a.userId)])];
+      const medName = rx.medicationRef?.name ?? rx.medication;
+      const patientName = `${rx.patient.person.firstName} ${rx.patient.person.lastNameP}`;
+
+      for (const userId of userIds) {
+        await this.notifications.create(organizationId, {
+          userId,
+          channel: "IN_APP",
+          type: "PRESCRIPTION_CREATED",
+          title: "Nueva receta pendiente de despacho",
+          message: `Dr. prescribio ${medName} para ${patientName}. Cant: ${rx.quantity ?? "N/A"}.`,
+          referenceType: "Prescription",
+          referenceId: rx.id,
+        });
+      }
+    } catch (err) {
+      this.logger.warn(`No se pudo notificar farmacia: ${err}`);
+    }
   }
 }

@@ -40,6 +40,7 @@ import CashRegisterPage from "@/pages/farmacia/CashRegister";
 import ReportesPage from "@/pages/reportes/Reportes";
 import ReportSchedulesPage from "@/pages/reportes/ReportSchedules";
 import DescargarAppPage from "@/pages/DescargarApp";
+import NotificationsPage from "@/pages/notifications/Notifications";
 import ProtectedLayout from "@/components/ProtectedLayout";
 
 export default function App() {
@@ -344,6 +345,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <ReportSchedulesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedLayout>
+            <NotificationsPage />
           </ProtectedLayout>
         }
       />

@@ -293,29 +293,47 @@ export default function POSPage() {
 
             {cart.length > 0 && (
               <div className="card p-0 overflow-x-auto">
+                {prescription?.quantity && (
+                  <div className="px-4 py-2 bg-warning-50 border-b border-warning-200 text-sm text-warning-700">
+                    Receta indica cantidad: {prescription.quantity}. Puedes dispensar parcialmente editando la cantidad.
+                  </div>
+                )}
                 <table className="w-full text-sm">
                   <thead><tr className="bg-ink-50 text-ink-600 text-left">
                     <th className="px-4 py-3 font-medium">Producto</th>
                     <th className="px-4 py-3 font-medium">Cant</th>
+                    <th className="px-4 py-3 font-medium">Stock</th>
                     <th className="px-4 py-3 font-medium">Precio</th>
                     <th className="px-4 py-3 font-medium">Total</th>
                     <th className="px-4 py-3 font-medium">Rx</th>
                     <th className="px-4 py-3"></th>
                   </tr></thead>
-                  <tbody>{cart.map((item, i) => (
+                  <tbody>{cart.map((item, i) => {
+                    const batch = batches?.find(b => b.id === item.batchId);
+                    return (
                     <tr key={i} className="border-t border-ink-100 hover:bg-ink-50">
                       <td className="px-4 py-3 text-ink-900">{item.name}</td>
                       <td className="px-4 py-3">
-                        <input type="number" min="1" value={item.qty}
+                        <input type="number" min="1" max={batch?.currentStock ?? 999} value={item.qty}
                           onChange={e => { const q = parseInt(e.target.value) || 1; setCart(prev => prev.map((c, j) => j === i ? { ...c, qty: q } : c)); }}
                           className="input w-16 text-center" />
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {batch ? (
+                          <span className={item.qty > batch.currentStock ? "text-danger-600 font-semibold" : "text-ink-500"}>
+                            {batch.currentStock}
+                          </span>
+                        ) : (
+                          <span className="text-ink-400">--</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-ink-900">${item.price.toFixed(2)}</td>
                       <td className="px-4 py-3 text-ink-900 font-mono">${(item.qty * item.price).toFixed(2)}</td>
                       <td className="px-4 py-3">{item.prescriptionId ? <span className="badge bg-info-100 text-info-700 text-xs">Rx</span> : <span className="text-ink-400 text-xs">--</span>}</td>
                       <td className="px-4 py-3"><button type="button" onClick={() => removeFromCart(i)} className="text-danger-600 text-xs hover:text-danger-800">Quitar</button></td>
                     </tr>
-                  ))}</tbody>
+                  );
+                  })}</tbody>
                 </table>
               </div>
             )}
