@@ -166,6 +166,14 @@ export class PharmacyService {
           throw new BadRequestException(`El medicamento "${med.name}" requiere receta medica. Vincula una receta para dispensarlo.`);
         }
 
+        if (dto.patientId && med.requiresPrescription) {
+          const patientAllergies = await this.checkAllergies(organizationId, dto.patientId, medicationId);
+          if (patientAllergies.length > 0) {
+            const allergyNames = patientAllergies.map(a => a.medication?.name ?? a.family?.name ?? a.group?.name ?? "desconocido").join(", ");
+            throw new BadRequestException(`ALERTA DE ALERGIA: El paciente es alergico a: ${allergyNames}. Verifica antes de dispensar.`);
+          }
+        }
+
         if (batchId) {
           const batch = await tx.inventoryBatch.findFirst({ where: { id: batchId, organizationId } });
           if (!batch) throw new NotFoundException(`Lote ${batchId} no encontrado`);
@@ -395,5 +403,41 @@ export class PharmacyService {
     });
 
     return allergies;
+  }
+
+  // --- PHARMACY QUEUE ---
+
+  async getPharmacyQueue(organizationId: string, userId: string, roles: string[], branchId?: string) {
+    const where: any = {
+      organizationId,
+      status: { in: ["ACTIVE", "PARTIALLY_DISPENSED"] },
+    };
+
+    if (branchId) {
+      where.doctor = { branchId };
+    }
+
+    const prescriptions = await this.prisma.prescription.findMany({
+      where,
+      include: {
+        patient: { include: { person: true } },
+        doctor: { include: { person: true } },
+        medicationRef: true,
+        dispensings: true,
+      },
+      orderBy: { prescribedAt: "desc" },
+      take: 100,
+    });
+
+    return prescriptions.map((rx) => {
+      const totalDispensed = rx.dispensings.reduce((sum, d) => sum + d.quantity, 0);
+      const remaining = rx.quantity ? rx.quantity - totalDispensed : null;
+      return {
+        ...rx,
+        totalDispensed,
+        remaining,
+        isFullyDispensed: remaining !== null && remaining <= 0,
+      };
+    });
   }
 }

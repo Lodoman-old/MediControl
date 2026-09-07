@@ -15,6 +15,11 @@ export class CreatePrescriptionDto {
   @IsString()
   medication!: string;
 
+  @ApiPropertyOptional({ description: "FK al catalogo de medicamentos. Si se provee, valida que exista y este activo." })
+  @IsOptional()
+  @IsString()
+  medicationId?: string;
+
   @ApiProperty()
   @IsString()
   dosage!: string;

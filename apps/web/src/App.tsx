@@ -32,6 +32,7 @@ import NewPaymentPage from "@/pages/pagos/NewPayment";
 import PaymentDetailPage from "@/pages/pagos/PaymentDetail";
 import FarmaciaPage from "@/pages/farmacia/Farmacia";
 import POSPage from "@/pages/farmacia/POS";
+import PharmacyQueuePage from "@/pages/farmacia/PharmacyQueue";
 import SalesHistoryPage from "@/pages/farmacia/SalesHistory";
 import SalesReportPage from "@/pages/farmacia/SalesReport";
 import InventoryAdjustmentPage from "@/pages/farmacia/InventoryAdjustment";
@@ -295,6 +296,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <SalesHistoryPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/farmacia/queue"
+        element={
+          <ProtectedLayout>
+            <PharmacyQueuePage />
           </ProtectedLayout>
         }
       />

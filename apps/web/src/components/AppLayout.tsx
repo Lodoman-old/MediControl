@@ -153,6 +153,7 @@ export default function AppLayout({ children }: Props) {
         <Dropdown label="Farmacia">
           <NavLink to="/farmacia">Inventario / Stock</NavLink>
           <NavLink to="/farmacia/pos">POS / Vender</NavLink>
+          <NavLink to="/farmacia/queue">Cola de farmacia</NavLink>
           <NavLink to="/farmacia/ventas">Historial ventas</NavLink>
           <NavLink to="/farmacia/reporte-ventas">Reporte</NavLink>
           <NavLink to="/farmacia/ajustes">Ajustar stock</NavLink>
@@ -220,6 +221,7 @@ export default function AppLayout({ children }: Props) {
           <div className="px-4 py-2 text-xs font-semibold text-ink-400 uppercase tracking-wider bg-ink-50/50">Farmacia</div>
           <MobileNavLink to="/farmacia">Inventario / Stock</MobileNavLink>
           <MobileNavLink to="/farmacia/pos">POS / Vender</MobileNavLink>
+          <MobileNavLink to="/farmacia/queue">Cola de farmacia</MobileNavLink>
           <MobileNavLink to="/farmacia/ventas">Historial ventas</MobileNavLink>
           <MobileNavLink to="/farmacia/reporte-ventas">Reporte</MobileNavLink>
           <MobileNavLink to="/farmacia/ajustes">Ajustar stock</MobileNavLink>

@@ -107,13 +107,27 @@ export default function POSPage() {
     onError: (e) => setError(extractErrorMessage(e)),
   });
 
-  const addToCart = (medId: string) => {
+  const addToCart = async (medId: string) => {
     const med = meds?.find(m => m.id === medId);
     if (!med) return;
     if (med.requiresPrescription && !prescriptionId) {
       setError(`"${med.name}" requiere receta medica. Vincula una receta desde Expediente.`);
       return;
     }
+
+    if (patientId && med.requiresPrescription) {
+      try {
+        const { data: allergies } = await api.get(`/pharmacy/patients/${patientId}/allergies/check/${medId}`);
+        if (allergies && allergies.length > 0) {
+          const allergyNames = allergies.map((a: any) => a.medication?.name ?? a.family?.name ?? a.group?.name ?? "desconocido").join(", ");
+          setError(`ALERTA DE ALERGIA: El paciente es alergico a: ${allergyNames}. Verifica antes de dispensar.`);
+          return;
+        }
+      } catch {
+        // If allergy check fails, proceed anyway
+      }
+    }
+
     const batch = batches?.find(b => b.medicationId === medId && b.currentStock > 0);
     if (!batch) { setError("Sin stock disponible"); return; }
     setCart(prev => [...prev, { medId, batchId: batch.id, qty: 1, price: Number(med.price), name: med.name, prescriptionId }]);

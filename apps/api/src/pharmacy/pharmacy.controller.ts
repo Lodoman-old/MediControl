@@ -132,4 +132,12 @@ export class PharmacyController {
   async dispense(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateDispensingDto) {
     return this.pharm.dispenseFromPrescription(u.organizationId, u.userId, dto);
   }
+
+  // --- PHARMACY QUEUE ---
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
+  @ApiOperation({ summary: "Cola de farmacia", description: "Recetas pendientes de despacho por sucursal." })
+  @Get("queue")
+  async getQueue(@CurrentUser() u: AuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.pharm.getPharmacyQueue(u.organizationId, u.userId, u.roles, branchId);
+  }
 }

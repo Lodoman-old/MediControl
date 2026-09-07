@@ -69,16 +69,30 @@ export class CashRegisterController {
     if (!register) throw new Error("Caja no encontrada");
     if (register.status !== "OPEN") throw new Error("La caja ya esta cerrada");
 
-    const sales = await this.prisma.sale.aggregate({
-      where: {
-        organizationId: u.organizationId,
-        branchId: register.branchId,
-        createdAt: { gte: register.openedAt },
-        status: "COMPLETED",
-      },
-      _sum: { total: true },
-    });
-    const expectedAmount = Number(register.initialAmount) + Number(sales._sum.total ?? 0);
+    const [sales, payments] = await Promise.all([
+      this.prisma.sale.aggregate({
+        where: {
+          organizationId: u.organizationId,
+          branchId: register.branchId,
+          createdAt: { gte: register.openedAt },
+          status: "COMPLETED",
+        },
+        _sum: { total: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: {
+          organizationId: u.organizationId,
+          branchId: register.branchId,
+          createdAt: { gte: register.openedAt },
+          status: "COMPLETED",
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const salesTotal = Number(sales._sum.total ?? 0);
+    const paymentsTotal = Number(payments._sum.amount ?? 0);
+    const expectedAmount = Number(register.initialAmount) + salesTotal + paymentsTotal;
     const difference = dto.actualAmount - expectedAmount;
 
     return this.prisma.cashRegister.update({

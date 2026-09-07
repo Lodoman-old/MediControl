@@ -27,6 +27,15 @@ export class PrescriptionsService {
       if (!record) throw new NotFoundException("Expediente no encontrado");
     }
 
+    let medicationId: string | null = null;
+    if (dto.medicationId) {
+      const med = await this.prisma.medication.findFirst({
+        where: { id: dto.medicationId, organizationId, isActive: true },
+      });
+      if (!med) throw new NotFoundException("Medicamento no encontrado o inactivo");
+      medicationId = med.id;
+    }
+
     return this.prisma.prescription.create({
       data: {
         organizationId,
@@ -34,6 +43,7 @@ export class PrescriptionsService {
         patientId: dto.patientId,
         doctorId: doctor.id,
         medication: dto.medication,
+        medicationId,
         dosage: dto.dosage,
         frequency: dto.frequency,
         duration: dto.duration ?? null,

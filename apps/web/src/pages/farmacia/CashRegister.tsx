@@ -19,6 +19,8 @@ interface CashRegister {
   openedBy: { id: string; email: string; person?: { firstName: string; lastNameP: string } };
   closedBy?: { id: string; email: string; person?: { firstName: string; lastNameP: string } };
   movements: Array<{ id: string; type: string; amount: number; reason: string | null; createdAt: string }>;
+  salesTotal?: number;
+  paymentsTotal?: number;
 }
 
 export default function CashRegisterPage() {
@@ -46,6 +48,22 @@ export default function CashRegisterPage() {
     queryKey: ["cash-register", "history"],
     queryFn: () => api.get<CashRegister[]>("/cash-register/history").then(r => r.data),
     enabled: tab === "history",
+  });
+
+  const { data: breakdown } = useQuery({
+    queryKey: ["cash-register", "breakdown", activeRegister?.id],
+    queryFn: async () => {
+      if (!activeRegister) return null;
+      const [salesRes, paymentsRes] = await Promise.all([
+        api.get("/pharmacy/sales", { params: { branchId: activeRegister.branchId } }).then(r => r.data ?? []),
+        api.get("/payments", { params: { branchId: activeRegister.branchId } }).then(r => r.data?.data ?? r.data ?? []),
+      ]);
+      const openedAt = new Date(activeRegister.openedAt).getTime();
+      const salesTotal = (salesRes as any[]).filter((s: any) => new Date(s.createdAt).getTime() >= openedAt && s.status === "COMPLETED").reduce((sum: number, s: any) => sum + Number(s.total), 0);
+      const paymentsTotal = (paymentsRes as any[]).filter((p: any) => new Date(p.createdAt).getTime() >= openedAt && p.status === "COMPLETED").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+      return { salesTotal, paymentsTotal };
+    },
+    enabled: !!activeRegister,
   });
 
   const openMutation = useMutation({
@@ -154,6 +172,14 @@ export default function CashRegisterPage() {
                     </dd></div>
                   <div><dt className="text-ink-500">Monto inicial</dt>
                     <dd className="font-mono font-semibold">${Number(activeRegister.initialAmount).toFixed(2)}</dd></div>
+                  {breakdown && (
+                    <>
+                      <div><dt className="text-ink-500">Ventas farmacia</dt>
+                        <dd className="font-mono font-semibold text-primary-700">${breakdown.salesTotal.toFixed(2)}</dd></div>
+                      <div><dt className="text-ink-500">Pagos consultas</dt>
+                        <dd className="font-mono font-semibold text-primary-700">${breakdown.paymentsTotal.toFixed(2)}</dd></div>
+                    </>
+                  )}
                   <div><dt className="text-ink-500">Ingresos estimados</dt>
                     <dd className="font-mono font-semibold">
                       {activeRegister.expectedAmount != null
