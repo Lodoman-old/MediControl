@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
 import { ScheduleService } from "./schedule.service";
 import { Roles } from "../auth/decorators/roles.decorator";
+import { Public } from "../auth/decorators/public.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import {
@@ -20,6 +21,7 @@ import {
   UpdateScheduleExceptionDto,
   AvailableSlotsQueryDto,
 } from "./dto/schedule.dto";
+import { BadRequestException } from "@nestjs/common";
 
 @ApiTags("Agenda / Horarios")
 @ApiBearerAuth()
@@ -122,5 +124,43 @@ export class ScheduleController {
   @Get("services")
   async listAvailableServices(@CurrentUser() user: AuthenticatedUser) {
     return this.schedule.listAvailableServices(user.organizationId);
+  }
+
+  // --- PUBLIC ENDPOINTS (no auth required) ---
+  @Public()
+  @ApiOperation({ summary: "Slots disponibles publicos", description: "Obtiene horarios disponibles para un medico y fecha. Requiere organizationId o slug." })
+  @Get("public/available-slots")
+  async getPublicAvailableSlots(
+    @Query("organizationId") organizationId: string,
+    @Query("slug") slug: string,
+    @Query() query: AvailableSlotsQueryDto,
+  ) {
+    const orgId = organizationId ?? (await this.schedule.getOrgIdBySlug(slug));
+    if (!orgId) throw new BadRequestException("organizationId o slug requerido");
+    return this.schedule.getAvailableSlots(orgId, query);
+  }
+
+  @Public()
+  @ApiOperation({ summary: "Doctores disponibles publicos", description: "Lista medicos con horarios activos. Requiere organizationId o slug." })
+  @Get("public/doctors")
+  async listPublicDoctors(
+    @Query("organizationId") organizationId: string,
+    @Query("slug") slug: string,
+  ) {
+    const orgId = organizationId ?? (await this.schedule.getOrgIdBySlug(slug));
+    if (!orgId) throw new BadRequestException("organizationId o slug requerido");
+    return this.schedule.listAvailableDoctors(orgId);
+  }
+
+  @Public()
+  @ApiOperation({ summary: "Servicios disponibles publicos", description: "Lista servicios medicos. Requiere organizationId o slug." })
+  @Get("public/services")
+  async listPublicServices(
+    @Query("organizationId") organizationId: string,
+    @Query("slug") slug: string,
+  ) {
+    const orgId = organizationId ?? (await this.schedule.getOrgIdBySlug(slug));
+    if (!orgId) throw new BadRequestException("organizationId o slug requerido");
+    return this.schedule.listAvailableServices(orgId);
   }
 }

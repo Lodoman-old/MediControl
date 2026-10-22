@@ -41,6 +41,7 @@ import ReportesPage from "@/pages/reportes/Reportes";
 import ReportSchedulesPage from "@/pages/reportes/ReportSchedules";
 import DescargarAppPage from "@/pages/DescargarApp";
 import NotificationsPage from "@/pages/notifications/Notifications";
+import PublicBookingPage from "@/pages/public/PublicBooking";
 import ProtectedLayout from "@/components/ProtectedLayout";
 
 export default function App() {
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/descargar" element={<DescargarAppPage />} />
+      <Route path="/reservar" element={<PublicBookingPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route
         path="/dashboard"

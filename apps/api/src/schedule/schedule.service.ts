@@ -349,4 +349,13 @@ export class ScheduleService {
       orderBy: { name: "asc" },
     });
   }
+
+  async getOrgIdBySlug(slug?: string): Promise<string | null> {
+    if (!slug) return null;
+    const org = await this.prisma.organization.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    return org?.id ?? null;
+  }
 }

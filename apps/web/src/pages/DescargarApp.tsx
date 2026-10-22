@@ -175,6 +175,10 @@ export default function DescargarAppPage() {
         )}
 
         <div className="mt-8 text-center">
+          <a href="/reservar" className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium mb-2">
+            Reservar cita online
+          </a>
+          <br />
           <a href="/login" className="text-sm text-primary-600 hover:text-primary-800 font-medium">
             Volver al login
           </a>

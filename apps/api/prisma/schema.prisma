@@ -28,6 +28,7 @@ model Organization {
   legalName     String   @map("legal_name") @db.VarChar(255)
   rfc           String   @db.VarChar(13)
   orgType       OrgType  @default(CLINIC) @map("org_type")
+  slug          String?  @unique @map("slug") @db.VarChar(80)
   fiscalAddress Json     @map("fiscal_address") @db.JsonB
   timezone      String   @default("America/Mexico_City") @db.VarChar(50)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz

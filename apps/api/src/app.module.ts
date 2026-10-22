@@ -24,6 +24,7 @@ import { WhatsappModule } from "./whatsapp/whatsapp.module";
 import { CashRegisterModule } from "./cash-register/cash-register.module";
 import { RolesModule } from "./roles/roles.module";
 import { ServicesModule } from "./services/services.module";
+import { PublicAppointmentModule } from "./public-appointment/public-appointment.module";
 import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { RolesGuard } from "./auth/guards/roles.guard";
 import { TenantContextMiddleware } from "./common/middleware/tenant-context.middleware";
@@ -58,6 +59,7 @@ import { MetricsInterceptor } from "./observability/metrics.interceptor";
     CashRegisterModule,
     RolesModule,
     ServicesModule,
+    PublicAppointmentModule,
     ObservabilityModule,
   ],
   controllers: [AppController],
