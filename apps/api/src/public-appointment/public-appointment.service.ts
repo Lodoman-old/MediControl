@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException, ConflictExc
 import { PrismaService } from "../prisma/prisma.service";
 import { hash as argonHash } from "@node-rs/argon2";
 import { randomBytes } from "crypto";
+import { wallTimeToUtc, timeOfDayMinutes, dateOnly, weekdayOf, shiftDate, formatMinutes } from "../common/timezone";
 import type { PublicBookAppointmentDto } from "./dto/public-appointment.dto";
 
 @Injectable()
@@ -30,70 +31,11 @@ export class PublicAppointmentService {
   }
 
   async bookPublicAppointment(organizationId: string, dto: PublicBookAppointmentDto): Promise<any> {
-    // Find or create patient
-    let patientId: string;
-
-    if (dto.patientId) {
-      const existing = await this.prisma.patient.findFirst({
-        where: { id: dto.patientId, organizationId },
-      });
-      if (!existing) throw new NotFoundException("Paciente no encontrado");
-      patientId = existing.id;
-    } else {
-      // Create new patient
-      const tempEmail = `public+${randomBytes(8).toString("hex")}@medicontrol.local`;
-      const tempPassword = randomBytes(12).toString("base64url");
-      const passwordHash = await argonHash(tempPassword);
-
-      const mrn = await this.generateMrn(organizationId);
-
-      const person = await this.prisma.person.create({
-        data: {
-          organizationId,
-          firstName: dto.firstName,
-          lastNameP: dto.lastNameP,
-          lastNameM: dto.lastNameM ?? null,
-          birthDate: new Date(dto.birthDate),
-          gender: dto.gender as any,
-          curp: dto.curp ?? null,
-        },
-      });
-
-      const user = await this.prisma.user.create({
-        data: {
-          organizationId,
-          personId: person.id,
-          email: tempEmail,
-          phoneE164: dto.phone,
-          passwordHash,
-          status: "ACTIVE",
-          mustChangePassword: true,
-        },
-      });
-
-      const patient = await this.prisma.patient.create({
-        data: {
-          organizationId,
-          userId: user.id,
-          personId: person.id,
-          mrn,
-          preferredLanguage: "es-MX",
-          consentPrivacyAt: new Date(),
-        },
-      });
-
-      const patientRole = await this.prisma.role.findFirst({
-        where: { organizationId, code: "PATIENT" },
-      });
-      if (patientRole) {
-        await this.prisma.userRole.create({
-          data: { organizationId, userId: user.id, roleId: patientRole.id },
-        });
-      }
-
-      patientId = patient.id;
-      this.logger.log(`Paciente público creado: ${patientId} (${dto.firstName} ${dto.lastNameP})`);
-    }
+    this.assertUuid(organizationId, "organizationId");
+    this.assertUuid(dto.doctorId, "doctorId");
+    this.assertUuid(dto.serviceId, "serviceId");
+    this.assertUuid(dto.branchId, "branchId");
+    if (dto.patientId) this.assertUuid(dto.patientId, "patientId");
 
     // Validate doctor
     const doctor = await this.prisma.doctor.findFirst({
@@ -113,10 +55,16 @@ export class PublicAppointmentService {
     });
     if (!branch) throw new NotFoundException("Sucursal no encontrada");
 
-    // Check availability
-    const [y, m, d] = dto.date.split("-").map(Number);
-    const targetDate = new Date(y, m - 1, d);
-    const dayOfWeek = targetDate.getDay();
+    // Check availability using the clinic timezone
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    if (!org) throw new NotFoundException("Clinica no encontrada");
+    const timeZone = org.timezone || "America/Mexico_City";
+
+    const dayOfWeek = weekdayOf(dto.date);
+    const targetDate = dateOnly(dto.date);
 
     const exception = await this.prisma.scheduleException.findFirst({
       where: { doctorId: dto.doctorId, exceptionDate: targetDate, organizationId },
@@ -131,17 +79,14 @@ export class PublicAppointmentService {
 
     if (schedules.length === 0) throw new ConflictException("El medico no tiene horario ese dia");
 
-    // Find the schedule that contains the requested time
+    // Find the schedule that contains the requested wall-clock time
     const [h, min] = dto.startTime.split(":").map(Number);
-    const requestedStart = new Date(targetDate);
-    requestedStart.setHours(h, min, 0, 0);
+    const requestedMinutes = h! * 60 + min!;
 
     const matchingSchedule = schedules.find((s) => {
-      const schedStart = new Date(targetDate);
-      schedStart.setHours(s.startTime.getHours(), s.startTime.getMinutes(), 0, 0);
-      const schedEnd = new Date(targetDate);
-      schedEnd.setHours(s.endTime.getHours(), s.endTime.getMinutes(), 0, 0);
-      return requestedStart >= schedStart && requestedStart < schedEnd;
+      const schedStart = timeOfDayMinutes(s.startTime);
+      const schedEnd = timeOfDayMinutes(s.endTime);
+      return requestedMinutes >= schedStart && requestedMinutes < schedEnd;
     });
 
     if (!matchingSchedule) {
@@ -150,12 +95,11 @@ export class PublicAppointmentService {
 
     // Check slot availability
     const slotDuration = dto.durationMin ?? service.durationMin ?? 30;
+    const requestedStart = wallTimeToUtc(dto.date, dto.startTime, timeZone);
     const requestedEnd = new Date(requestedStart.getTime() + slotDuration * 60 * 1000);
 
-    // Check if slot is free
-    const dateStart = new Date(targetDate);
-    const dateEnd = new Date(targetDate);
-    dateEnd.setDate(dateEnd.getDate() + 1);
+    const dateStart = wallTimeToUtc(dto.date, "00:00", timeZone);
+    const dateEnd = wallTimeToUtc(shiftDate(dto.date, 1), "00:00", timeZone);
 
     const existingAppts = await this.prisma.appointment.findMany({
       where: {
@@ -166,39 +110,101 @@ export class PublicAppointmentService {
       select: { startsAt: true, endsAt: true },
     });
 
-    const occupied = existingAppts.map((a) => [a.startsAt, a.endsAt]);
-
-    for (const [oStart, oEnd] of occupied) {
-      if (requestedStart < oEnd && requestedEnd > oStart) {
+    for (const a of existingAppts) {
+      if (requestedStart < a.endsAt && requestedEnd > a.startsAt) {
         throw new ConflictException("El horario solicitado ya esta ocupado");
       }
     }
 
-    // Create appointment
-    const appointment = await this.prisma.appointment.create({
-      data: {
-        organizationId,
-        doctorId: dto.doctorId,
-        patientId,
-        serviceId: dto.serviceId,
-        branchId: dto.branchId,
-        startsAt: requestedStart,
-        endsAt: requestedEnd,
-        reason: dto.reason ?? null,
-        channel: "ONLINE",
-        priceQuoted: service.defaultPrice,
-        currency: service.currency,
-        status: "SCHEDULED",
-      },
-      include: {
-        doctor: { include: { person: true } },
-        service: true,
-        branch: true,
-        patient: { include: { person: true } },
-      },
+    // Resolve or create patient and appointment atomically. If anything fails,
+    // no orphan person/user/patient rows are left behind.
+    const appointment = await this.prisma.$transaction(async (tx) => {
+      let patientId: string;
+
+      if (dto.patientId) {
+        const existing = await tx.patient.findFirst({
+          where: { id: dto.patientId, organizationId },
+        });
+        if (!existing) throw new NotFoundException("Paciente no encontrado");
+        patientId = existing.id;
+      } else {
+        const tempEmail = `public+${randomBytes(8).toString("hex")}@medicontrol.local`;
+        const tempPassword = randomBytes(12).toString("base64url");
+        const passwordHash = await argonHash(tempPassword);
+        const mrn = await this.generateMrn(organizationId);
+
+        const person = await tx.person.create({
+          data: {
+            organizationId,
+            firstName: dto.firstName,
+            lastNameP: dto.lastNameP,
+            lastNameM: dto.lastNameM ?? null,
+            birthDate: new Date(dto.birthDate),
+            gender: dto.gender as any,
+            curp: dto.curp ?? null,
+          },
+        });
+
+        const user = await tx.user.create({
+          data: {
+            organizationId,
+            personId: person.id,
+            email: tempEmail,
+            phoneE164: dto.phone,
+            passwordHash,
+            status: "ACTIVE",
+            mustChangePassword: true,
+          },
+        });
+
+        const patient = await tx.patient.create({
+          data: {
+            organizationId,
+            userId: user.id,
+            personId: person.id,
+            mrn,
+            preferredLanguage: "es-MX",
+            consentPrivacyAt: new Date(),
+          },
+        });
+
+        const patientRole = await tx.role.findFirst({
+          where: { organizationId, code: "PATIENT" },
+        });
+        if (patientRole) {
+          await tx.userRole.create({
+            data: { organizationId, userId: user.id, roleId: patientRole.id },
+          });
+        }
+
+        patientId = patient.id;
+      }
+
+      return tx.appointment.create({
+        data: {
+          organizationId,
+          doctorId: dto.doctorId,
+          patientId,
+          serviceId: dto.serviceId,
+          branchId: dto.branchId,
+          startsAt: requestedStart,
+          endsAt: requestedEnd,
+          reason: dto.reason ?? null,
+          channel: "ONLINE",
+          priceQuoted: service.defaultPrice,
+          currency: service.currency,
+          status: "SCHEDULED",
+        },
+        include: {
+          doctor: { include: { person: true } },
+          service: true,
+          branch: true,
+          patient: { include: { person: true } },
+        },
+      });
     });
 
-    this.logger.log(`Cita pública creada: ${appointment.id} (paciente: ${patientId}, medico: ${dto.doctorId})`);
+    this.logger.log(`Cita pública creada: ${appointment.id} (paciente: ${appointment.patientId}, medico: ${dto.doctorId})`);
 
     return {
       appointmentId: appointment.id,
@@ -219,9 +225,18 @@ export class PublicAppointmentService {
     date: string,
     serviceId: string,
   ): Promise<{ available: boolean; slots: Array<{ start: string; end: string }> }> {
-    const [y, m, d] = date.split("-").map(Number);
-    const targetDate = new Date(y, m - 1, d);
-    const dayOfWeek = targetDate.getDay();
+    this.assertUuid(organizationId, "organizationId");
+    this.assertUuid(doctorId, "doctorId");
+    this.assertUuid(serviceId, "serviceId");
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    if (!org) throw new NotFoundException("Clinica no encontrada");
+    const timeZone = org.timezone || "America/Mexico_City";
+
+    const targetDate = dateOnly(date);
 
     const exception = await this.prisma.scheduleException.findFirst({
       where: { doctorId, exceptionDate: targetDate, organizationId },
@@ -229,7 +244,7 @@ export class PublicAppointmentService {
     if (exception && !exception.isAvailable) return { available: false, slots: [] };
 
     const schedules = await this.prisma.schedule.findMany({
-      where: { doctorId, dayOfWeek, isActive: true, organizationId },
+      where: { doctorId, dayOfWeek: weekdayOf(date), isActive: true, organizationId },
     });
     if (schedules.length === 0) return { available: false, slots: [] };
 
@@ -238,9 +253,8 @@ export class PublicAppointmentService {
     });
     const slotDuration = service?.durationMin ?? 30;
 
-    const dateStart = new Date(targetDate);
-    const dateEnd = new Date(targetDate);
-    dateEnd.setDate(dateEnd.getDate() + 1);
+    const dateStart = wallTimeToUtc(date, "00:00", timeZone);
+    const dateEnd = wallTimeToUtc(shiftDate(date, 1), "00:00", timeZone);
 
     const existingAppts = await this.prisma.appointment.findMany({
       where: {
@@ -251,54 +265,32 @@ export class PublicAppointmentService {
       select: { startsAt: true, endsAt: true },
     });
 
-    const occupied = existingAppts.map((a) => [a.startsAt, a.endsAt]);
     const slots: Array<{ start: string; end: string }> = [];
-    const fmt = (dt: Date) =>
-      `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+    const isOccupied = (start: Date, end: Date) =>
+      existingAppts.some((a) => start < a.endsAt && end > a.startsAt);
 
     for (const sched of schedules) {
-      const startH = sched.startTime.getHours();
-      const startM = sched.startTime.getMinutes();
-      const endH = sched.endTime.getHours();
-      const endM = sched.endTime.getMinutes();
+      const startMin = timeOfDayMinutes(sched.startTime);
+      const endMin = Math.min(timeOfDayMinutes(sched.endTime), 24 * 60 - 1);
 
-      const blockStart = new Date(y, m - 1, d, startH, startM);
-      const blockEnd = new Date(y, m - 1, d, endH, endM);
-
-      const sorted = [...occupied].sort((a, b) => a[0].getTime() - b[0].getTime());
-      let cursor = new Date(blockStart);
-
-      for (const [oStart, oEnd] of sorted) {
-        if (cursor >= blockEnd) break;
-        if (oStart > cursor) {
-          const gapStart = new Date(cursor);
-          const gapEnd = new Date(Math.min(oStart.getTime(), blockEnd.getTime()));
-          // Generate slots of slotDuration minutes
-          let slotStart = new Date(gapStart);
-          while (slotStart < gapEnd) {
-            const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
-            if (slotEnd <= gapEnd) {
-              slots.push({ start: fmt(slotStart), end: fmt(slotEnd) });
-            }
-            slotStart = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
-          }
-        }
-        cursor = new Date(Math.max(cursor.getTime(), oEnd.getTime()));
-      }
-
-      if (cursor < blockEnd) {
-        let slotStart = new Date(cursor);
-        while (slotStart < blockEnd) {
-          const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
-          if (slotEnd <= blockEnd) {
-            slots.push({ start: fmt(slotStart), end: fmt(slotEnd) });
-          }
-          slotStart = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
+      for (let cursor = startMin; cursor + slotDuration <= endMin; cursor += slotDuration) {
+        const startTime = formatMinutes(cursor);
+        const endTime = formatMinutes(cursor + slotDuration);
+        const slotStart = wallTimeToUtc(date, startTime, timeZone);
+        const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
+        if (!isOccupied(slotStart, slotEnd)) {
+          slots.push({ start: startTime, end: endTime });
         }
       }
     }
 
     return { available: slots.length > 0, slots };
+  }
+
+  private assertUuid(value: string | undefined, field: string): void {
+    if (!value || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+      throw new BadRequestException(`${field} invalido`);
+    }
   }
 
   private async generateMrn(organizationId: string): Promise<string> {

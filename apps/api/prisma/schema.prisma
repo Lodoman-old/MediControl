@@ -590,6 +590,7 @@ model Schedule {
   doctor          Doctor           @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   serviceLocation ServiceLocation? @relation(fields: [serviceLocationId], references: [id], onDelete: SetNull)
 
+  @@unique([doctorId, dayOfWeek, serviceLocationId])
   @@index([doctorId, dayOfWeek])
   @@index([organizationId])
   @@map("schedules")

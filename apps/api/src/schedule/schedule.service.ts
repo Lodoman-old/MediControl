@@ -9,6 +9,7 @@ import type {
   AvailableSlotDto,
 } from "./dto/schedule.dto";
 import type { Doctor } from "@prisma/client";
+import { wallTimeToUtc, timeOfDayMinutes, dateOnly, weekdayOf, shiftDate, formatMinutes } from "../common/timezone";
 
 async function findDoctor(prisma: PrismaService, organizationId: string, idOrUserId: string): Promise<Doctor> {
   const doctor = await prisma.doctor.findFirst({
@@ -44,8 +45,8 @@ export class ScheduleService {
       doctorId: s.doctorId,
       serviceLocationId: s.serviceLocationId,
       dayOfWeek: s.dayOfWeek,
-      startTime: `${String(s.startTime.getHours()).padStart(2, "0")}:${String(s.startTime.getMinutes()).padStart(2, "0")}`,
-      endTime: `${String(s.endTime.getHours()).padStart(2, "0")}:${String(s.endTime.getMinutes()).padStart(2, "0")}`,
+      startTime: formatMinutes(timeOfDayMinutes(s.startTime)),
+      endTime: formatMinutes(timeOfDayMinutes(s.endTime)),
       slotDurationMin: s.slotDurationMin,
       isActive: s.isActive,
       maxPatients: s.maxPatients,
@@ -59,7 +60,7 @@ export class ScheduleService {
 
     const toTime = (t: string): Date => {
       const [h, m] = t.split(":").map(Number);
-      const d = new Date(1970, 0, 1, h, m);
+      const d = new Date(Date.UTC(1970, 0, 1, h!, m!));
       if (isNaN(d.getTime())) throw new BadRequestException(`Formato de hora invalido: ${t}`);
       return d;
     };
@@ -114,10 +115,10 @@ export class ScheduleService {
     if (!schedule) throw new NotFoundException("Horario no encontrado");
 
     const newStart = dto.startTime !== undefined
-      ? (([h, m]) => new Date(1970, 0, 1, +h, +m))(dto.startTime.split(":"))
+      ? (([h, m]) => new Date(Date.UTC(1970, 0, 1, +h, +m)))(dto.startTime.split(":"))
       : schedule.startTime;
     const newEnd = dto.endTime !== undefined
-      ? (([h, m]) => new Date(1970, 0, 1, +h, +m))(dto.endTime.split(":"))
+      ? (([h, m]) => new Date(Date.UTC(1970, 0, 1, +h, +m)))(dto.endTime.split(":"))
       : schedule.endTime;
     const newDay = dto.dayOfWeek ?? schedule.dayOfWeek;
 
@@ -216,9 +217,16 @@ export class ScheduleService {
     query: { date: string; doctorId: string; durationMin?: number; serviceLocationId?: string },
   ): Promise<AvailableSlotDto[]> {
     const { date, doctorId, durationMin, serviceLocationId } = query;
-    const [y, m, d] = date.split("-").map(Number);
-    const targetDate = new Date(y, m - 1, d);
-    const dayOfWeek = targetDate.getDay();
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    if (!org) throw new NotFoundException("Clinica no encontrada");
+    const timeZone = org.timezone || "America/Mexico_City";
+
+    const dayOfWeek = weekdayOf(date);
+    const targetDate = dateOnly(date);
 
     const doctor = await findDoctor(this.prisma, organizationId, doctorId);
     const docId = doctor.id;
@@ -241,8 +249,8 @@ export class ScheduleService {
 
     if (schedules.length === 0) return [];
 
-    const dateStart = new Date(y, m - 1, d);
-    const dateEnd = new Date(y, m - 1, d + 1);
+    const dateStart = wallTimeToUtc(date, "00:00", timeZone);
+    const dateEnd = wallTimeToUtc(shiftDate(date, 1), "00:00", timeZone);
 
     const existingAppts = await this.prisma.appointment.findMany({
       where: {
@@ -274,13 +282,11 @@ export class ScheduleService {
     const freeBlocks: AvailableSlotDto[] = [];
 
     for (const sched of schedules) {
-      const startH = sched.startTime.getHours();
-      const startM = sched.startTime.getMinutes();
-      const endH = sched.endTime.getHours();
-      const endM = sched.endTime.getMinutes();
+      const startMin = timeOfDayMinutes(sched.startTime);
+      const endMin = Math.min(timeOfDayMinutes(sched.endTime), 24 * 60 - 1);
 
-      const blockStart = new Date(y, m - 1, d, startH, startM);
-      const blockEnd = new Date(y, m - 1, d, endH, endM);
+      const blockStart = wallTimeToUtc(date, formatMinutes(startMin), timeZone);
+      const blockEnd = wallTimeToUtc(date, formatMinutes(endMin), timeZone);
 
       const sorted = [...occupied].sort((a, b) => a[0].getTime() - b[0].getTime());
 
@@ -312,8 +318,8 @@ export class ScheduleService {
       doctorId: s.doctorId,
       serviceLocationId: s.serviceLocationId,
       dayOfWeek: s.dayOfWeek,
-      startTime: `${String(s.startTime.getHours()).padStart(2, "0")}:${String(s.startTime.getMinutes()).padStart(2, "0")}`,
-      endTime: `${String(s.endTime.getHours()).padStart(2, "0")}:${String(s.endTime.getMinutes()).padStart(2, "0")}`,
+      startTime: formatMinutes(timeOfDayMinutes(s.startTime)),
+      endTime: formatMinutes(timeOfDayMinutes(s.endTime)),
       slotDurationMin: s.slotDurationMin,
       isActive: s.isActive,
       maxPatients: s.maxPatients,

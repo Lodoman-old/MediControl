@@ -205,7 +205,7 @@ export default function PublicBookingPage() {
               <div><dt className="text-ink-500">Medico</dt><dd className="font-medium">{d.doctor}</dd></div>
               <div><dt className="text-ink-500">Servicio</dt><dd>{d.service}</dd></div>
               <div><dt className="text-ink-500">Sucursal</dt><dd>{d.branch}</dd></div>
-              <div><dt className="text-ink-500">Fecha y hora</dt><dd className="font-mono">{new Date(d.startsAt).toLocaleString("es-MX", { dateStyle: "full", timeStyle: "short" })}</dd></div>
+              <div><dt className="text-ink-500">Fecha y hora</dt><dd className="font-mono">{new Date(`${date}T12:00:00`).toLocaleDateString("es-MX", { dateStyle: "full" })} · {startTime} h</dd></div>
               <div><dt className="text-ink-500">Precio estimado</dt><dd className="font-mono font-semibold text-primary-700">${Number(d.priceQuoted).toFixed(2)} {d.currency}</dd></div>
             </dl>
             <button onClick={resetToBooking} className="mt-4 btn-primary w-full">Agendar otra cita</button>
