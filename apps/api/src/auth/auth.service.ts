@@ -592,7 +592,7 @@ export class AuthService {
     const resetUrl = `${this.config.get<string>("PORTAL_URL", "http://localhost:5173")}/reset-password?token=${token}`;
     const html = `<h2>Recuperacion de Contrasena</h2><p>Hola ${fullName},</p><p>Recibiste este correo porque solicitaste restablecer tu contrasena.</p><p>Haz clic en el siguiente enlace para crear una nueva contrasena:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Este enlace expira en 1 hora.</p><p>Si no solicitaste este cambio, ignora este mensaje.</p>`;
 
-    await this.mail.send({ to: user.email, subject: "Recuperacion de Contrasena - MediControl", html });
+    await this.mail.send({ to: user.email, subject: "Recuperacion de Contrasena - MediControl", html }, user.organizationId);
 
     this.logger.log(`Password reset email sent to ${email}`);
     return { message: "Si el email existe, recibiras un enlace de recuperacion" };

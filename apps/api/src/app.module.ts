@@ -6,6 +6,7 @@ import { AppService } from "./app.service";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { AdminModule } from "./admin/admin.module";
+import { SettingsModule } from "./settings/settings.module";
 import { ScheduleModule } from "./schedule/schedule.module";
 import { AppointmentModule } from "./appointment/appointment.module";
 import { ClinicalRecordModule } from "./clinical-record/clinical-record.module";
@@ -41,6 +42,7 @@ import { MetricsInterceptor } from "./observability/metrics.interceptor";
     PrismaModule,
     AuthModule,
     AdminModule,
+    SettingsModule,
     ScheduleModule,
     AppointmentModule,
     ClinicalRecordModule,

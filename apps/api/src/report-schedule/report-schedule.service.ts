@@ -123,7 +123,7 @@ export class ReportScheduleService {
     }
 
     const recipients = JSON.parse(schedule.recipients) as string[];
-    await this.mail.sendReport(recipients, subject, `Adjunto reporte programado: ${schedule.name}`, pdfBuffer, `reporte-${schedule.reportType}-${now}.pdf`);
+    await this.mail.sendReport(recipients, subject, `Adjunto reporte programado: ${schedule.name}`, pdfBuffer, `reporte-${schedule.reportType}-${now}.pdf`, schedule.organizationId);
   }
 
   async trigger(organizationId: string, id: string) {

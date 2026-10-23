@@ -77,12 +77,12 @@ export class NotificationsService {
 
     if (dto.channel === "EMAIL") {
       const email = user.email;
-      const ok = await this.mail.send({ to: email, subject: subject ?? "", html: message });
+      const ok = await this.mail.send({ to: email, subject: subject ?? "", html: message }, organizationId);
       await this.logDelivery(organizationId, notification.id, dto.channel, email, subject ?? "", message, ok);
     } else if (dto.channel === "WHATSAPP") {
       const phone = user.phoneE164;
       if (phone) {
-        const ok = await this.whatsapp.sendTextMessage(phone, message);
+        const ok = await this.whatsapp.sendTextMessage(phone, message, organizationId);
         await this.logDelivery(organizationId, notification.id, dto.channel, phone, "", message, ok);
       }
     }
@@ -259,7 +259,7 @@ export class NotificationsService {
 
         if (reminder.reminderType === "EMAIL" && user?.email) {
           const html = `<h2>Recordatorio de Cita</h2><p>Hola ${patientName},</p><p>Te recordamos que tienes una cita el <strong>${dateStr}</strong> a las <strong>${timeStr}</strong> con el Dr. ${doctorName}.</p>`;
-          const ok = await this.mail.send({ to: user.email, subject: "Recordatorio de Cita", html });
+          const ok = await this.mail.send({ to: user.email, subject: "Recordatorio de Cita", html }, orgId);
           await this.updateReminderStatus(reminder.id, ok ? "SENT" : "FAILED", ok ? null : "Error al enviar");
           await this.create(orgId, {
             userId: user.id,
@@ -274,6 +274,7 @@ export class NotificationsService {
           const ok = await this.whatsapp.sendTextMessage(
             user.phoneE164,
             `MediControl: Recordatorio de cita\nPaciente: ${patientName}\nFecha: ${dateStr}\nHora: ${timeStr}\nDoctor: ${doctorName}`,
+            orgId,
           );
           await this.updateReminderStatus(reminder.id, ok ? "SENT" : "FAILED", ok ? null : "Error al enviar");
         } else {
@@ -350,14 +351,14 @@ export class NotificationsService {
   private async sendEmail(organizationId: string, notificationId: string, dto: CreateNotificationDto) {
     const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
     if (!user?.email) return;
-    const ok = await this.mail.send({ to: user.email, subject: dto.title, html: dto.message });
+    const ok = await this.mail.send({ to: user.email, subject: dto.title, html: dto.message }, organizationId);
     await this.logDelivery(organizationId, notificationId, "EMAIL", user.email, dto.title, dto.message, ok);
   }
 
   private async sendWhatsApp(organizationId: string, notificationId: string, dto: CreateNotificationDto) {
     const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
     if (!user?.phoneE164) return;
-    const ok = await this.whatsapp.sendTextMessage(user.phoneE164, `${dto.title}\n\n${dto.message}`);
+    const ok = await this.whatsapp.sendTextMessage(user.phoneE164, `${dto.title}\n\n${dto.message}`, organizationId);
     await this.logDelivery(organizationId, notificationId, "WHATSAPP", user.phoneE164, dto.title, dto.message, ok);
   }
 

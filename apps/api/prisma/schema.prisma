@@ -31,10 +31,18 @@ model Organization {
   slug          String?  @unique @map("slug") @db.VarChar(80)
   fiscalAddress Json     @map("fiscal_address") @db.JsonB
   timezone      String   @default("America/Mexico_City") @db.VarChar(50)
+  displayName   String?  @map("display_name") @db.VarChar(160)
+  logoUrl       String?  @map("logo_url") @db.Text
+  primaryColor  String?  @map("primary_color") @db.VarChar(20)
+  secondaryColor String? @map("secondary_color") @db.VarChar(20)
+  phone         String?  @db.VarChar(30)
+  email         String?  @db.VarChar(160)
+  website       String?  @db.VarChar(200)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   branches              Branch[]
+  integrations          IntegrationConfig[]
   users                 User[]
   persons               Person[]
   doctors               Doctor[]
@@ -74,6 +82,22 @@ model Organization {
   cashRegisters         CashRegister[]
 
   @@map("organizations")
+}
+
+model IntegrationConfig {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  provider       String   @db.VarChar(30)
+  isEnabled      Boolean  @default(false) @map("is_enabled")
+  configEnc      String?  @map("config_enc") @db.Text
+  updatedBy      String?  @map("updated_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+  @@map("integration_configs")
 }
 
 model Branch {
@@ -1010,7 +1034,8 @@ model InventoryBatch {
   saleItems    SaleItem[]
   dispensings  Dispensing[]
 
-  @@unique([organizationId, batchNumber, medicationId, branchId])
+  @@unique([organizationId, batchNumber, medicationId], map: "inventory_batches_organization_id_batch_number_medication_i_key")
+  @@unique([organizationId, batchNumber, medicationId, branchId], map: "inventory_batches_organization_id_batch_number_medication_id_br")
   @@index([medicationId])
   @@index([branchId])
   @@index([expiryDate])
