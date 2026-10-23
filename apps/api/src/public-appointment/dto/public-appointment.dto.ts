@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString, IsOptional, IsDateString, IsIn, IsUUID, MinLength } from "class-validator";
+import { IsString, IsOptional, IsDateString, IsIn, MinLength } from "class-validator";
 
 export class PublicBookAppointmentDto {
   @ApiPropertyOptional({ description: "ID de la organizacion (alternativa a slug)" })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   organizationId?: string;
 
   @ApiPropertyOptional({ description: "Slug publico de la organizacion (alternativa a organizationId)" })
@@ -13,15 +13,15 @@ export class PublicBookAppointmentDto {
   slug?: string;
 
   @ApiProperty({ description: "ID del medico" })
-  @IsUUID()
+  @IsString()
   doctorId!: string;
 
   @ApiProperty({ description: "ID del servicio" })
-  @IsUUID()
+  @IsString()
   serviceId!: string;
 
   @ApiProperty({ description: "ID de la sucursal" })
-  @IsUUID()
+  @IsString()
   branchId!: string;
 
   @ApiProperty({ description: "Fecha de la cita (YYYY-MM-DD)", example: "2026-10-15" })
@@ -77,7 +77,7 @@ export class PublicBookAppointmentDto {
 
   @ApiPropertyOptional({ description: "ID de paciente existente (opcional)" })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   patientId?: string;
 }
 
