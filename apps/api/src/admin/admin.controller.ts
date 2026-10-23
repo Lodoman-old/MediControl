@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -22,6 +23,7 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { PaginatedUserListDto, UserListItemDto } from "./dto/user-list.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { CreateBranchDto, UpdateBranchDto } from "./dto/branch.dto";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -96,6 +98,50 @@ export class AdminController {
   async listBranches(@CurrentUser() user: AuthenticatedUser) {
     const branches = await this.admin.listBranches(user.organizationId);
     return { data: branches };
+  }
+
+  @Roles("SUPERADMIN", "ADMIN")
+  @ApiOperation({ summary: "Obtener sucursal", description: "Detalle de una sucursal con sus consultorios." })
+  @Get("branches/:id")
+  async getBranch(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    return this.admin.getBranch(user.organizationId, id);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN")
+  @ApiOperation({ summary: "Crear sucursal", description: "Crea una sucursal (direccion fisica) de la organizacion." })
+  @Post("branches")
+  @HttpCode(HttpStatus.CREATED)
+  async createBranch(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateBranchDto,
+  ) {
+    return this.admin.createBranch(user.organizationId, dto);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN")
+  @ApiOperation({ summary: "Actualizar sucursal", description: "Actualiza datos de una sucursal." })
+  @Patch("branches/:id")
+  async updateBranch(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateBranchDto,
+  ) {
+    return this.admin.updateBranch(user.organizationId, id, dto);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN")
+  @ApiOperation({ summary: "Eliminar sucursal", description: "Elimina una sucursal sin movimientos asociados." })
+  @Delete("branches/:id")
+  @HttpCode(HttpStatus.OK)
+  async deleteBranch(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+  ) {
+    await this.admin.deleteBranch(user.organizationId, id);
+    return { message: "Sucursal eliminada" };
   }
 
   @Roles("SUPERADMIN", "ADMIN")

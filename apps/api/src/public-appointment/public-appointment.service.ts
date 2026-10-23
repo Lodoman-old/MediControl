@@ -10,6 +10,16 @@ export class PublicAppointmentService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async listPublicClinics() {
+    const clinics = await this.prisma.organization.findMany({
+      where: { branches: { some: { isActive: true } } },
+      select: { id: true, legalName: true, slug: true },
+      orderBy: { legalName: "asc" },
+    });
+
+    return clinics.map((c) => ({ id: c.id, name: c.legalName, slug: c.slug }));
+  }
+
   async getOrgIdBySlug(slug?: string): Promise<string | null> {
     if (!slug) return null;
     const org = await this.prisma.organization.findUnique({

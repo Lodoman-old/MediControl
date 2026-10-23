@@ -173,6 +173,7 @@ export default function AppLayout({ children }: Props) {
         <Dropdown label="Admin">
           <NavLink to="/reportes">Reportes</NavLink>
           <NavLink to="/schedule">Horarios</NavLink>
+          <NavLink to="/admin/sucursales">Sucursales</NavLink>
           <NavLink to="/admin/ubicaciones">Ubicaciones</NavLink>
           <NavLink to="/admin/servicios">Servicios</NavLink>
           <NavLink to="/admin/roles">Roles</NavLink>
@@ -242,6 +243,7 @@ export default function AppLayout({ children }: Props) {
           <div className="px-4 py-2 text-xs font-semibold text-ink-400 uppercase tracking-wider bg-ink-50/50">Administracion</div>
           <MobileNavLink to="/reportes">Reportes</MobileNavLink>
           <MobileNavLink to="/schedule">Horarios</MobileNavLink>
+          <MobileNavLink to="/admin/sucursales">Sucursales</MobileNavLink>
           <MobileNavLink to="/admin/ubicaciones">Ubicaciones</MobileNavLink>
           <MobileNavLink to="/admin/servicios">Servicios</MobileNavLink>
           <MobileNavLink to="/admin/roles">Roles</MobileNavLink>

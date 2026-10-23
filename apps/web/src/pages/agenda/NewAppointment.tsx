@@ -26,6 +26,12 @@ interface Branch {
   name: string;
 }
 
+interface ServiceLocation {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface AvailableSlot {
   start: string;
   end: string;
@@ -101,9 +107,11 @@ export default function NewAppointmentPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [serviceLocations, setServiceLocations] = useState<ServiceLocation[]>([]);
   const [freeBlocks, setFreeBlocks] = useState<AvailableSlot[]>([]);
 
   const [branchId, setBranchId] = useState(user?.branchId ?? "");
+  const [serviceLocationId, setServiceLocationId] = useState("");
   const [doctorId, setDoctorId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [serviceId, setServiceId] = useState("");
@@ -130,6 +138,17 @@ export default function NewAppointmentPage() {
       if (svc) setPrice(Number(svc.defaultPrice));
     }
   }, [serviceId, services]);
+
+  useEffect(() => {
+    setServiceLocationId("");
+    if (!branchId) {
+      setServiceLocations([]);
+      return;
+    }
+    api.get("/service-locations", { params: { branchId } })
+      .then(({ data }: any) => setServiceLocations((data?.data ?? data ?? []).filter((l: ServiceLocation & { isActive?: boolean }) => l.isActive !== false)))
+      .catch(() => setServiceLocations([]));
+  }, [branchId]);
 
   const loadSlots = async () => {
     if (!doctorId || !date || !serviceId) return;
@@ -216,6 +235,7 @@ export default function NewAppointmentPage() {
         patientId,
         serviceId,
         branchId,
+        serviceLocationId: serviceLocationId || undefined,
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
         reason: reason || null,
@@ -258,6 +278,18 @@ export default function NewAppointmentPage() {
               ))}
             </select>
           </div>
+
+          {serviceLocations.length > 0 && (
+            <div>
+              <label className="label">Consultorio / Ubicacion (opcional)</label>
+              <select className="input" value={serviceLocationId} onChange={(e) => setServiceLocationId(e.target.value)}>
+                <option value="">Sin asignar</option>
+                {serviceLocations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

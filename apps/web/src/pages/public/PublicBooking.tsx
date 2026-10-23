@@ -6,6 +6,7 @@ import Logo from "@/components/Logo";
 interface Doctor { id: string; fullName: string; specialtyCode?: string; }
 interface Service { id: string; name: string; durationMin: number; defaultPrice: number; }
 interface Branch { id: string; name: string; }
+interface Clinic { id: string; name: string; slug: string | null; }
 interface Slot { start: string; end: string; }
 interface AvailableSlotsResponse { available: boolean; slots: Slot[]; }
 
@@ -34,6 +35,10 @@ export default function PublicBookingPage() {
     urlOrgId ? { organizationId: urlOrgId } : urlSlug ? { slug: urlSlug } : {},
   );
   const [orgInput, setOrgInput] = useState("");
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [pickedClinic, setPickedClinic] = useState("");
+  const [loadingClinics, setLoadingClinics] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -64,6 +69,22 @@ export default function PublicBookingPage() {
 
   const hasOrg = Boolean(org.organizationId || org.slug);
   const orgKey = orgQuery(org);
+
+  useEffect(() => {
+    if (hasOrg) return;
+    let alive = true;
+    setLoadingClinics(true);
+    api.get<Clinic[]>("/public/clinics")
+      .then((r) => {
+        if (!alive) return;
+        const list = r.data ?? [];
+        setClinics(list);
+        if (list.length === 1 && list[0]) setOrg({ organizationId: list[0].id });
+      })
+      .catch(() => { if (alive) setClinics([]); })
+      .finally(() => { if (alive) setLoadingClinics(false); });
+    return () => { alive = false; };
+  }, [hasOrg]);
 
   useEffect(() => {
     if (!hasOrg) return;
@@ -212,18 +233,49 @@ export default function PublicBookingPage() {
 
         {!hasOrg && (
           <div className="card space-y-3">
-            <label className="label">Clinica (slug publico o ID)</label>
-            <input
-              type="text"
-              className="input"
-              placeholder="ej. demo  o  el UUID de la organizacion"
-              value={orgInput}
-              onChange={(e) => setOrgInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); useOrgFromInput(); } }}
-            />
-            <button onClick={useOrgFromInput} className="btn-primary w-full" disabled={!orgInput.trim()}>
-              Continuar
-            </button>
+            {loadingClinics && <p className="text-sm text-ink-500">Cargando clinicas...</p>}
+
+            {!loadingClinics && clinics.length > 0 && !manualMode && (
+              <>
+                <label className="label">Selecciona tu clinica</label>
+                <select className="input" value={pickedClinic} onChange={(e) => setPickedClinic(e.target.value)}>
+                  <option value="">Seleccionar...</option>
+                  {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <button
+                  onClick={() => { if (pickedClinic) setOrg({ organizationId: pickedClinic }); }}
+                  className="btn-primary w-full"
+                  disabled={!pickedClinic}
+                >
+                  Continuar
+                </button>
+                <button type="button" onClick={() => setManualMode(true)} className="text-xs text-ink-500 hover:text-ink-700 w-full">
+                  Usar enlace o ID manual
+                </button>
+              </>
+            )}
+
+            {!loadingClinics && (clinics.length === 0 || manualMode) && (
+              <>
+                <label className="label">Clinica (slug publico o ID)</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="ej. demo  o  el UUID de la organizacion"
+                  value={orgInput}
+                  onChange={(e) => setOrgInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); useOrgFromInput(); } }}
+                />
+                <button onClick={useOrgFromInput} className="btn-primary w-full" disabled={!orgInput.trim()}>
+                  Continuar
+                </button>
+                {clinics.length > 0 && (
+                  <button type="button" onClick={() => setManualMode(false)} className="text-xs text-ink-500 hover:text-ink-700 w-full">
+                    Volver a la lista de clinicas
+                  </button>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -231,7 +283,7 @@ export default function PublicBookingPage() {
           <form onSubmit={handleSubmit} className="card space-y-4">
             <div className="flex items-center justify-between text-xs text-ink-500">
               <span>Clinica: <strong className="text-ink-700">{orgLabel(org)}</strong></span>
-              <button type="button" onClick={() => { setOrg({}); setOrgInput(""); setListError(""); }} className="text-primary-600 hover:text-primary-800 font-medium">
+              <button type="button" onClick={() => { setOrg({}); setOrgInput(""); setListError(""); setManualMode(false); setPickedClinic(""); }} className="text-primary-600 hover:text-primary-800 font-medium">
                 Cambiar
               </button>
             </div>

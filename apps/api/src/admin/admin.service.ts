@@ -11,6 +11,7 @@ import type { CreateUserDto } from "./dto/create-user.dto";
 import type { UpdateUserDto } from "./dto/update-user.dto";
 import type { PaginatedUserListDto, UserListItemDto } from "./dto/user-list.dto";
 import type { ResetPasswordDto } from "./dto/reset-password.dto";
+import type { CreateBranchDto, UpdateBranchDto } from "./dto/branch.dto";
 
 function parseFullName(fullName: string): { firstName: string; lastNameP: string; lastNameM: string | null } {
   const parts = fullName.trim().split(/\s+/);
@@ -108,9 +109,126 @@ export class AdminService {
   async listBranches(organizationId: string) {
     return this.prisma.branch.findMany({
       where: { organizationId },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        address: true,
+        phone: true,
+        cofeprisLicense: true,
+        isActive: true,
+        createdAt: true,
+        serviceLocations: {
+          select: { id: true, code: true, name: true, locationType: true, isActive: true },
+          orderBy: { name: "asc" },
+        },
+        _count: { select: { appointments: true } },
+      },
       orderBy: { name: "asc" },
     });
+  }
+
+  async getBranch(organizationId: string, branchId: string) {
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, organizationId },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        address: true,
+        phone: true,
+        cofeprisLicense: true,
+        isActive: true,
+        createdAt: true,
+        serviceLocations: {
+          select: { id: true, code: true, name: true, locationType: true, isActive: true },
+          orderBy: { name: "asc" },
+        },
+        _count: { select: { appointments: true } },
+      },
+    });
+    if (!branch) throw new NotFoundException("Sucursal no encontrada");
+    return branch;
+  }
+
+  async createBranch(organizationId: string, dto: CreateBranchDto) {
+    const code = dto.code.trim().toUpperCase();
+
+    const duplicate = await this.prisma.branch.findFirst({
+      where: { organizationId, code },
+    });
+    if (duplicate) throw new BadRequestException("Ya existe una sucursal con ese codigo");
+
+    const branch = await this.prisma.branch.create({
+      data: {
+        organizationId,
+        code,
+        name: dto.name.trim(),
+        address: (dto.address ?? {}) as any,
+        phone: dto.phone ?? null,
+        cofeprisLicense: dto.cofeprisLicense ?? null,
+        isActive: dto.isActive ?? true,
+      },
+    });
+
+    this.logger.log(`Sucursal creada: ${branch.code} (${branch.id})`);
+    return this.getBranch(organizationId, branch.id);
+  }
+
+  async updateBranch(organizationId: string, branchId: string, dto: UpdateBranchDto) {
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, organizationId },
+    });
+    if (!branch) throw new NotFoundException("Sucursal no encontrada");
+
+    const data: Record<string, unknown> = {};
+
+    if (dto.code !== undefined) {
+      const code = dto.code.trim().toUpperCase();
+      if (code !== branch.code) {
+        const duplicate = await this.prisma.branch.findFirst({
+          where: { organizationId, code, id: { not: branchId } },
+        });
+        if (duplicate) throw new BadRequestException("Ya existe una sucursal con ese codigo");
+      }
+      data.code = code;
+    }
+    if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.address !== undefined) data.address = dto.address as any;
+    if (dto.phone !== undefined) data.phone = dto.phone || null;
+    if (dto.cofeprisLicense !== undefined) data.cofeprisLicense = dto.cofeprisLicense || null;
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
+
+    if (Object.keys(data).length > 0) {
+      await this.prisma.branch.update({ where: { id: branchId }, data: data as any });
+      this.logger.log(`Sucursal actualizada: ${branchId}`);
+    }
+
+    return this.getBranch(organizationId, branchId);
+  }
+
+  async deleteBranch(organizationId: string, branchId: string) {
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, organizationId },
+    });
+    if (!branch) throw new NotFoundException("Sucursal no encontrada");
+
+    const [appointments, payments, sales, cashRegisters, inventoryBatches] = await Promise.all([
+      this.prisma.appointment.count({ where: { branchId } }),
+      this.prisma.payment.count({ where: { branchId } }),
+      this.prisma.sale.count({ where: { branchId } }),
+      this.prisma.cashRegister.count({ where: { branchId } }),
+      this.prisma.inventoryBatch.count({ where: { branchId } }),
+    ]);
+
+    if (appointments + payments + sales + cashRegisters + inventoryBatches > 0) {
+      throw new BadRequestException(
+        "No se puede eliminar la sucursal porque tiene citas, pagos, ventas, cajas o inventario asociados. Desactivala en su lugar.",
+      );
+    }
+
+    await this.prisma.branch.delete({ where: { id: branchId } });
+    this.logger.log(`Sucursal eliminada: ${branch.code} (${branchId})`);
   }
 
   async getUser(organizationId: string, userId: string): Promise<UserListItemDto> {

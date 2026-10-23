@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -18,7 +19,9 @@ interface Branch {
 
 export default function LocationsListPage() {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ branchId: "", code: "", name: "", locationType: "EXAM_ROOM" });
+  const [searchParams] = useSearchParams();
+  const branchFilter = searchParams.get("branchId") ?? "";
+  const [form, setForm] = useState({ branchId: branchFilter, code: "", name: "", locationType: "EXAM_ROOM" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +59,7 @@ export default function LocationsListPage() {
     onError: (e) => setError(extractErrorMessage(e)),
   });
 
-  const resetForm = () => setForm({ branchId: "", code: "", name: "", locationType: "EXAM_ROOM" });
+  const resetForm = () => setForm({ branchId: branchFilter, code: "", name: "", locationType: "EXAM_ROOM" });
 
   const startEdit = (loc: Location) => {
     setEditingId(loc.id);
@@ -74,9 +77,23 @@ export default function LocationsListPage() {
     }
   };
 
+  const filtered = (locations ?? []).filter((l) => !branchFilter || l.branchId === branchFilter);
+  const filterBranchName = (branches ?? []).find((b) => b.id === branchFilter)?.name;
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-ink-900">Consultorios / Ubicaciones</h2>
+      <div>
+        <h2 className="text-2xl font-semibold text-ink-900">Consultorios / Ubicaciones</h2>
+        <p className="text-sm text-ink-500 mt-1">
+          Los consultorios pertenecen a una sucursal (direccion fisica). Una sucursal puede tener varios consultorios.
+        </p>
+        {filterBranchName && (
+          <p className="text-sm text-primary-700 mt-2">
+            Mostrando consultorios de: <strong>{filterBranchName}</strong>{" "}
+            <a href="/admin/ubicaciones" className="text-primary-600 hover:text-primary-800 font-medium ml-2">Ver todas</a>
+          </p>
+        )}
+      </div>
 
       {error && <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg"><p className="text-sm text-danger-700">{error}</p></div>}
 
@@ -101,10 +118,12 @@ export default function LocationsListPage() {
             <label className="label text-xs">Tipo</label>
             <select className="input" value={form.locationType} onChange={(e) => setForm({ ...form, locationType: e.target.value })}>
               <option value="EXAM_ROOM">Consultorio</option>
-              <option value="OFFICE">Oficina</option>
+              <option value="OR">Quirofano</option>
+              <option value="BED">Cama</option>
+              <option value="ER_BAY">Area de urgencias</option>
+              <option value="PROCEDURE">Procedimientos</option>
               <option value="LAB">Laboratorio</option>
-              <option value="EMERGENCY">Emergencia</option>
-              <option value="OTHER">Otro</option>
+              <option value="IMAGING">Imagenologia</option>
             </select>
           </div>
           <button type="submit" className="btn-primary">{editingId ? "Actualizar" : "Agregar"}</button>
@@ -124,10 +143,10 @@ export default function LocationsListPage() {
             </tr>
           </thead>
           <tbody>
-            {locations?.length === 0 ? (
+            {filtered.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-ink-500">Sin ubicaciones</td></tr>
             ) : (
-              locations?.map((loc) => {
+              filtered.map((loc) => {
                 const branch = (branches ?? []).find((b) => b.id === loc.branchId);
                 return (
                   <tr key={loc.id} className="border-t border-ink-100 hover:bg-ink-50">

@@ -11,6 +11,7 @@ import RolesListPage from "@/pages/admin/RolesList";
 import RoleFormPage from "@/pages/admin/RoleForm";
 import ServicesListPage from "@/pages/admin/ServicesList";
 import LocationsListPage from "@/pages/admin/LocationsList";
+import BranchesListPage from "@/pages/admin/BranchesList";
 import AgendaPage from "@/pages/agenda/Agenda";
 import NewAppointmentPage from "@/pages/agenda/NewAppointment";
 import DoctorConfirmationsPage from "@/pages/agenda/DoctorConfirmations";
@@ -123,6 +124,14 @@ export default function App() {
         element={
           <ProtectedLayout requiredRoles={["SUPERADMIN","ADMIN"]}>
             <LocationsListPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/admin/sucursales"
+        element={
+          <ProtectedLayout requiredRoles={["SUPERADMIN","ADMIN"]}>
+            <BranchesListPage />
           </ProtectedLayout>
         }
       />
