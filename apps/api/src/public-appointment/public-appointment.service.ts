@@ -243,6 +243,8 @@ export class PublicAppointmentService {
 
     const occupied = existingAppts.map((a) => [a.startsAt, a.endsAt]);
     const slots: Array<{ start: string; end: string }> = [];
+    const fmt = (dt: Date) =>
+      `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
 
     for (const sched of schedules) {
       const startH = sched.startTime.getHours();
@@ -266,7 +268,7 @@ export class PublicAppointmentService {
           while (slotStart < gapEnd) {
             const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
             if (slotEnd <= gapEnd) {
-              slots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString() });
+              slots.push({ start: fmt(slotStart), end: fmt(slotEnd) });
             }
             slotStart = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
           }
@@ -279,7 +281,7 @@ export class PublicAppointmentService {
         while (slotStart < blockEnd) {
           const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
           if (slotEnd <= blockEnd) {
-            slots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString() });
+            slots.push({ start: fmt(slotStart), end: fmt(slotEnd) });
           }
           slotStart = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
         }

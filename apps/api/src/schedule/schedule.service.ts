@@ -350,6 +350,14 @@ export class ScheduleService {
     });
   }
 
+  async listAvailableBranches(organizationId: string) {
+    return this.prisma.branch.findMany({
+      where: { organizationId, isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
   async getOrgIdBySlug(slug?: string): Promise<string | null> {
     if (!slug) return null;
     const org = await this.prisma.organization.findUnique({

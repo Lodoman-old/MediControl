@@ -163,4 +163,16 @@ export class ScheduleController {
     if (!orgId) throw new BadRequestException("organizationId o slug requerido");
     return this.schedule.listAvailableServices(orgId);
   }
+
+  @Public()
+  @ApiOperation({ summary: "Sucursales publicas", description: "Lista sucursales activas. Requiere organizationId o slug." })
+  @Get("public/branches")
+  async listPublicBranches(
+    @Query("organizationId") organizationId: string,
+    @Query("slug") slug: string,
+  ) {
+    const orgId = organizationId ?? (await this.schedule.getOrgIdBySlug(slug));
+    if (!orgId) throw new BadRequestException("organizationId o slug requerido");
+    return this.schedule.listAvailableBranches(orgId);
+  }
 }
