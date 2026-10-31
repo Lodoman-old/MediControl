@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
+import { buildPatientGreeting, openWhatsapp } from "@/lib/whatsapp";
 
 interface PatientDetail {
   id: string;
@@ -326,12 +327,25 @@ export default function ExpedientePage() {
             Exp: {patient.mrn} &middot; {patient.bloodType ? `Sangre: ${patient.bloodType}` : ""}
           </p>
         </div>
-        <Link
-          to={`/expediente/${patientId}/history`}
-          className="btn-secondary text-sm w-full sm:w-auto text-center"
-        >
-          Historia medica
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {patient.phone && (
+            <button
+              onClick={() =>
+                openWhatsapp(patient.phone, buildPatientGreeting(patient.fullName))
+              }
+              className="btn-secondary text-sm w-full sm:w-auto text-center"
+              title="Abrir WhatsApp con este paciente"
+            >
+              WhatsApp
+            </button>
+          )}
+          <Link
+            to={`/expediente/${patientId}/history`}
+            className="btn-secondary text-sm w-full sm:w-auto text-center"
+          >
+            Historia medica
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center border-b border-ink-100 -mx-4 sm:mx-0 px-4 sm:px-0">

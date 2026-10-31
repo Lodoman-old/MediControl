@@ -96,7 +96,12 @@ export class AppointmentService {
       where: { id: appointmentId, organizationId },
       include: {
         doctor: { include: { person: true } },
-        patient: { include: { person: true } },
+        patient: {
+          include: {
+            person: true,
+            user: { select: { phoneE164: true } },
+          },
+        },
         service: true,
         serviceLocation: true,
         branch: true,
@@ -278,7 +283,12 @@ export class AppointmentService {
       where,
       include: {
         doctor: { include: { person: true } },
-        patient: { include: { person: true } },
+        patient: {
+          include: {
+            person: true,
+            user: { select: { phoneE164: true } },
+          },
+        },
         service: { select: { name: true } },
       },
       orderBy: { startsAt: "asc" },
@@ -310,6 +320,7 @@ export class AppointmentService {
         patientName: a.patient?.person
           ? `${a.patient.person.firstName} ${a.patient.person.lastNameP}`.trim()
           : null,
+        patientPhone: a.patient?.user?.phoneE164 ?? null,
         serviceName: a.service?.name ?? null,
         reason: a.reason,
       })),

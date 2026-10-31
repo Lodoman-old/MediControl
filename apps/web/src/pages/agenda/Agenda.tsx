@@ -6,6 +6,7 @@ import { es } from "date-fns/locale";
 import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { appointmentStatusLabel } from "@/lib/roles";
+import { buildAppointmentMessage, openWhatsapp } from "@/lib/whatsapp";
 
 interface Appointment {
   id: string;
@@ -18,6 +19,7 @@ interface Appointment {
   currency: string;
   doctorName: string | null;
   patientName: string | null;
+  patientPhone: string | null;
   serviceName: string | null;
   locationName: string | null;
   branchName: string | null;
@@ -167,6 +169,25 @@ export default function AgendaPage() {
                       >
                         Editar
                       </button>
+                      {a.patientPhone && (
+                        <button
+                          onClick={() =>
+                            openWhatsapp(
+                              a.patientPhone,
+                              buildAppointmentMessage({
+                                patientName: a.patientName,
+                                startsAt: a.startsAt,
+                                doctorName: a.doctorName,
+                                location: a.locationName ?? a.branchName,
+                              }),
+                            )
+                          }
+                          className="text-green-600 hover:text-green-800 text-sm font-medium"
+                          title="Enviar recordatorio por WhatsApp"
+                        >
+                          WhatsApp
+                        </button>
+                      )}
                       {canTriage && a.status === "CHECKED_IN" && (
                         <button
                           onClick={() => navigate("/triage")}

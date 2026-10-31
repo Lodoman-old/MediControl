@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
+import { buildPatientGreeting, openWhatsapp } from "@/lib/whatsapp";
 
 interface PatientListItem {
   id: string;
@@ -96,12 +97,25 @@ export default function PatientListPage() {
                   <td className="px-4 py-3 text-ink-600">{p.phone ?? "—"}</td>
                   <td className="px-4 py-3">{p.bloodType ? <span className="badge">{p.bloodType}</span> : "—"}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => navigate(`/expediente/${p.id}`)}
-                      className="btn-primary text-xs"
-                    >
-                      Ver expediente
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      {p.phone && (
+                        <button
+                          onClick={() =>
+                            openWhatsapp(p.phone, buildPatientGreeting(p.fullName))
+                          }
+                          className="btn-secondary text-xs"
+                          title="Abrir WhatsApp con este paciente"
+                        >
+                          WhatsApp
+                        </button>
+                      )}
+                      <button
+                        onClick={() => navigate(`/expediente/${p.id}`)}
+                        className="btn-primary text-xs"
+                      >
+                        Ver expediente
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

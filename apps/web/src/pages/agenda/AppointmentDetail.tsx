@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { appointmentStatusLabel } from "@/lib/roles";
+import { buildAppointmentMessage, openWhatsapp } from "@/lib/whatsapp";
 
 interface Prescription {
   id: string;
@@ -38,7 +39,7 @@ interface AppointmentDetail {
   priceQuoted: string;
   currency: string;
   doctor: { id: string; person: { firstName: string; lastNameP: string; lastNameM: string | null } };
-  patient: { id: string; person: { firstName: string; lastNameP: string; lastNameM: string | null }; mrn: string };
+  patient: { id: string; person: { firstName: string; lastNameP: string; lastNameM: string | null }; mrn: string; user?: { phoneE164: string | null } | null };
   service: { name: string };
   serviceLocation: { name: string } | null;
   branch: { name: string };
@@ -96,6 +97,9 @@ export default function AppointmentDetailPage() {
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [savingReschedule, setSavingReschedule] = useState(false);
+  const [showWhatsapp, setShowWhatsapp] = useState(false);
+  const [waMessage, setWaMessage] = useState("");
+  const [waCopied, setWaCopied] = useState(false);
 
   const load = () => {
     if (!id) return;
@@ -217,6 +221,31 @@ export default function AppointmentDetailPage() {
   const doctorName = `${appt.doctor.person.firstName} ${appt.doctor.person.lastNameP}`;
   const actions = STATUS_ACTIONS[appt.status]?.filter((a) => user?.roles.includes(a.role)) ?? [];
 
+  const patientPhone = appt.patient.user?.phoneE164 ?? null;
+  const locationName = appt.serviceLocation?.name ?? appt.branch.name;
+
+  const openWhatsappModal = () => {
+    setWaMessage(
+      buildAppointmentMessage({
+        patientName,
+        startsAt: appt.startsAt,
+        doctorName,
+        location: locationName,
+      }),
+    );
+    setWaCopied(false);
+    setShowWhatsapp(true);
+  };
+
+  const copyWhatsappMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(waMessage);
+      setWaCopied(true);
+    } catch {
+      window.alert("No se pudo copiar el mensaje. Selecciona el texto y copialo manualmente.");
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <button onClick={() => navigate("/agenda")} className="text-sm text-primary-600 hover:text-primary-800">&larr; Volver a agenda</button>
@@ -265,6 +294,23 @@ export default function AppointmentDetailPage() {
             <p className="text-ink-900">{appt.reason}</p>
           </div>
         )}
+      </div>
+
+      <div className="card flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="text-lg font-semibold text-ink-900">Contacto del paciente</h3>
+          <p className="text-sm text-ink-600 mt-1">
+            {patientPhone ?? "Sin telefono registrado"}
+          </p>
+        </div>
+        <button
+          onClick={openWhatsappModal}
+          disabled={!patientPhone}
+          className="btn-secondary"
+          title={patientPhone ? "Abrir WhatsApp con el recordatorio" : "Registra un telefono para enviar WhatsApp"}
+        >
+          Recordar por WhatsApp
+        </button>
       </div>
 
       {actions.length > 0 && (
@@ -319,6 +365,41 @@ export default function AppointmentDetailPage() {
                 {savingReschedule ? "Guardando..." : "Reprogramar"}
               </button>
               <button onClick={() => setShowReschedule(false)} className="btn-secondary">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWhatsapp && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowWhatsapp(false)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-ink-900 mb-1">Enviar recordatorio por WhatsApp</h3>
+            <p className="text-xs text-ink-500 mb-3">
+              Se abrira WhatsApp con el mensaje listo. Solo confirma el envio desde tu telefono o escritorio.
+            </p>
+            <textarea
+              className="input min-h-[190px] resize-y"
+              value={waMessage}
+              onChange={(e) => setWaMessage(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button
+                onClick={() => {
+                  if (!openWhatsapp(patientPhone, waMessage)) {
+                    setError("El telefono del paciente no es valido para WhatsApp");
+                  }
+                  setShowWhatsapp(false);
+                }}
+                className="btn-primary flex-1"
+              >
+                Abrir WhatsApp
+              </button>
+              <button onClick={copyWhatsappMessage} className="btn-secondary">
+                {waCopied ? "Copiado" : "Copiar mensaje"}
+              </button>
+              <button onClick={() => setShowWhatsapp(false)} className="btn-secondary">
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
