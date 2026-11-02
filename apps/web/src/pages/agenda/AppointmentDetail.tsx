@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api, extractErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { appointmentStatusLabel } from "@/lib/roles";
-import { buildAppointmentMessage, openWhatsapp } from "@/lib/whatsapp";
+import { buildAppointmentMessage, buildDoctorAppointmentMessage, buildPrescriptionMessage, openWhatsapp } from "@/lib/whatsapp";
 
 interface Prescription {
   id: string;
@@ -38,7 +38,7 @@ interface AppointmentDetail {
   channel: string;
   priceQuoted: string;
   currency: string;
-  doctor: { id: string; person: { firstName: string; lastNameP: string; lastNameM: string | null } };
+  doctor: { id: string; person: { firstName: string; lastNameP: string; lastNameM: string | null }; user?: { phoneE164: string | null } | null };
   patient: { id: string; person: { firstName: string; lastNameP: string; lastNameM: string | null }; mrn: string; user?: { phoneE164: string | null } | null };
   service: { name: string };
   serviceLocation: { name: string } | null;
@@ -222,7 +222,29 @@ export default function AppointmentDetailPage() {
   const actions = STATUS_ACTIONS[appt.status]?.filter((a) => user?.roles.includes(a.role)) ?? [];
 
   const patientPhone = appt.patient.user?.phoneE164 ?? null;
+  const doctorPhone = appt.doctor.user?.phoneE164 ?? null;
   const locationName = appt.serviceLocation?.name ?? appt.branch.name;
+
+  const sendPrescriptionWhatsapp = () => {
+    if (!patientPhone || prescriptions.length === 0) return;
+    const active = prescriptions.filter((p) => p.status === "ACTIVE");
+    const items = (active.length > 0 ? active : prescriptions).map((p) => ({
+      medication: p.medication,
+      dosage: p.dosage,
+      frequency: p.frequency,
+      duration: p.duration,
+      route: p.route,
+      indications: p.indications,
+    }));
+    openWhatsapp(
+      patientPhone,
+      buildPrescriptionMessage({
+        patientName,
+        prescriptions: items,
+        doctorName,
+      }),
+    );
+  };
 
   const openWhatsappModal = () => {
     setWaMessage(
@@ -310,6 +332,34 @@ export default function AppointmentDetailPage() {
           title={patientPhone ? "Abrir WhatsApp con el recordatorio" : "Registra un telefono para enviar WhatsApp"}
         >
           Recordar por WhatsApp
+        </button>
+      </div>
+
+      <div className="card flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="text-lg font-semibold text-ink-900">Confirmacion al medico</h3>
+          <p className="text-sm text-ink-600 mt-1">
+            {doctorPhone ?? "Sin telefono registrado"}
+          </p>
+        </div>
+        <button
+          onClick={() =>
+            openWhatsapp(
+              doctorPhone,
+              buildDoctorAppointmentMessage({
+                doctorName,
+                patientName,
+                startsAt: appt.startsAt,
+                serviceName: appt.service.name,
+                location: locationName,
+              }),
+            )
+          }
+          disabled={!doctorPhone}
+          className="btn-secondary"
+          title={doctorPhone ? "Enviar la cita al medico por WhatsApp" : "El medico no tiene telefono registrado"}
+        >
+          Avisar al medico
         </button>
       </div>
 
@@ -436,9 +486,16 @@ export default function AppointmentDetailPage() {
         <div className="card">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-ink-900">Recetas</h3>
-            <button onClick={downloadAllPrescriptionsPdf} className="btn-secondary text-xs">
-              Receta completa PDF
-            </button>
+            <div className="flex items-center gap-2">
+              {patientPhone && (
+                <button onClick={sendPrescriptionWhatsapp} className="btn-secondary text-xs">
+                  Enviar por WhatsApp
+                </button>
+              )}
+              <button onClick={downloadAllPrescriptionsPdf} className="btn-secondary text-xs">
+                Receta completa PDF
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             {prescriptions.map((p) => (

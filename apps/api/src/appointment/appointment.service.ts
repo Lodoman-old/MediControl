@@ -95,7 +95,12 @@ export class AppointmentService {
     const appointment = await this.prisma.appointment.findFirst({
       where: { id: appointmentId, organizationId },
       include: {
-        doctor: { include: { person: true } },
+        doctor: {
+          include: {
+            person: true,
+            user: { select: { phoneE164: true } },
+          },
+        },
         patient: {
           include: {
             person: true,

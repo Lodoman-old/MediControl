@@ -102,6 +102,83 @@ export function buildPatientGreeting(patientName?: string | null, clinicName?: s
   return `Hola${name ? ` ${name}` : ""}, le saludamos de${clinicName ? ` ${clinicName}` : " su clinica"}. En que podemos ayudarle?`;
 }
 
+interface PrescriptionLine {
+  medication: string;
+  dosage: string;
+  frequency: string;
+  duration?: string | null;
+  route?: string | null;
+  indications?: string | null;
+}
+
+export function buildPrescriptionMessage({
+  patientName,
+  prescriptions,
+  doctorName,
+}: {
+  patientName?: string | null;
+  prescriptions: PrescriptionLine[];
+  doctorName?: string | null;
+}): string {
+  const lines: string[] = [];
+  lines.push(`Hola ${firstName(patientName) || ""}, le compartimos su receta medica:`);
+  lines.push("");
+  prescriptions.forEach((p, index) => {
+    lines.push(`${index + 1}) ${p.medication} ${p.dosage}`.trim());
+    lines.push(`   Frecuencia: ${p.frequency}`);
+    if (p.duration) lines.push(`   Duracion: ${p.duration}`);
+    if (p.route) lines.push(`   Via: ${p.route}`);
+    if (p.indications) lines.push(`   Indicaciones: ${p.indications}`);
+    lines.push("");
+  });
+  if (doctorName) lines.push(`Medico: ${doctorName}`);
+  lines.push("Recuerde seguir las indicaciones de su medico.");
+  return lines.join("\n");
+}
+
+export function buildDoctorAppointmentMessage({
+  doctorName,
+  patientName,
+  startsAt,
+  serviceName,
+  location,
+}: {
+  doctorName?: string | null;
+  patientName?: string | null;
+  startsAt: string;
+  serviceName?: string | null;
+  location?: string | null;
+}): string {
+  const date = new Date(startsAt);
+  const dateText = date.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const timeText = date.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const doctor = doctorName
+    ? /^dr\.?\s/i.test(doctorName)
+      ? doctorName
+      : `Dr. ${doctorName}`
+    : "Doctor";
+
+  const lines: string[] = [];
+  lines.push(`Hola ${doctor}, le confirmamos una cita asignada:`);
+  lines.push("");
+  lines.push(`Paciente: ${patientName ?? ""}`);
+  lines.push(`Fecha: ${dateText}`);
+  lines.push(`Hora: ${timeText}`);
+  if (serviceName) lines.push(`Servicio: ${serviceName}`);
+  if (location) lines.push(`Lugar: ${location}`);
+  lines.push("");
+  lines.push("Por favor confirme su disponibilidad.");
+  return lines.join("\n");
+}
+
 interface PaymentReceiptInput {
   patientName?: string | null;
   amount: number | string;
