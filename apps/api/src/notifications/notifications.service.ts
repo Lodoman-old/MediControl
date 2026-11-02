@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
 import { WhatsappService } from "../whatsapp/whatsapp.service";
@@ -9,6 +10,7 @@ import type { CreateNotificationDto, SendNotificationDto } from "./dto/notificat
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private remindersRunning = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -216,75 +218,142 @@ export class NotificationsService {
     return { data: logs, page, limit, total, totalPages: Math.ceil(total / limit) };
   }
 
-  async sendAppointmentReminders() {
-    const now = new Date();
-    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async sendAppointmentReminders(organizationId?: string) {
+    if (this.remindersRunning) {
+      this.logger.warn("Los recordatorios ya estan en ejecucion; se omite este ciclo");
+      return { processed: 0, sent: 0, failed: 0, skipped: 0, running: true };
+    }
+    this.remindersRunning = true;
 
-    const reminders = await this.prisma.appointmentReminder.findMany({
-      where: {
-        status: "PENDING",
-        scheduledFor: { lte: inOneHour },
-      },
-      include: {
-        appointment: {
-          include: {
-            patient: { include: { person: true } },
-            doctor: { include: { person: true } },
-            organization: true,
+    const summary = { processed: 0, sent: 0, failed: 0, skipped: 0 };
+
+    try {
+      const now = new Date();
+
+      const reminders = await this.prisma.appointmentReminder.findMany({
+        where: {
+          status: "PENDING",
+          scheduledFor: { lte: now },
+          ...(organizationId
+            ? { appointment: { is: { organizationId } } }
+            : {}),
+        },
+        include: {
+          appointment: {
+            include: {
+              patient: { include: { person: true } },
+              doctor: { include: { person: true } },
+              organization: true,
+            },
           },
         },
-      },
-    });
+        orderBy: { scheduledFor: "asc" },
+      });
 
-    for (const reminder of reminders) {
-      try {
-        const appointment = reminder.appointment;
-        const orgId = appointment.organizationId;
-        const patientName = appointment.patient?.person
-          ? `${appointment.patient.person.firstName} ${appointment.patient.person.lastNameP}`
-          : "Paciente";
-        const doctorName = appointment.doctor?.person
-          ? `${appointment.doctor.person.firstName} ${appointment.doctor.person.lastNameP}`
-          : "Medico";
-        const dateStr = appointment.startsAt.toLocaleDateString("es-MX", {
-          weekday: "long", day: "numeric", month: "long", year: "numeric",
-        });
-        const timeStr = appointment.startsAt.toLocaleTimeString("es-MX", {
-          hour: "2-digit", minute: "2-digit",
-        });
+      for (const reminder of reminders) {
+        summary.processed++;
+        try {
+          const appointment = reminder.appointment;
 
-        const user = await this.prisma.user.findFirst({
-          where: { patient: { id: appointment.patientId }, organizationId: orgId },
-        });
+          if (["CANCELED", "NO_SHOW", "COMPLETED"].includes(appointment.status)) {
+            await this.updateReminderStatus(reminder.id, "SKIPPED", "La cita ya no esta activa");
+            summary.skipped++;
+            continue;
+          }
 
-        if (reminder.reminderType === "EMAIL" && user?.email) {
-          const html = `<h2>Recordatorio de Cita</h2><p>Hola ${patientName},</p><p>Te recordamos que tienes una cita el <strong>${dateStr}</strong> a las <strong>${timeStr}</strong> con el Dr. ${doctorName}.</p>`;
-          const ok = await this.mail.send({ to: user.email, subject: "Recordatorio de Cita", html }, orgId);
-          await this.updateReminderStatus(reminder.id, ok ? "SENT" : "FAILED", ok ? null : "Error al enviar");
-          await this.create(orgId, {
-            userId: user.id,
-            channel: "EMAIL",
-            type: "APPOINTMENT_REMINDER",
-            title: "Recordatorio de Cita",
-            message: `Tienes una cita el ${dateStr} a las ${timeStr} con Dr. ${doctorName}.`,
-            referenceType: "appointment",
-            referenceId: appointment.id,
+          const orgId = appointment.organizationId;
+          const timeZone = appointment.organization?.timezone || "America/Mexico_City";
+          const patientName = appointment.patient?.person
+            ? `${appointment.patient.person.firstName} ${appointment.patient.person.lastNameP}`
+            : "Paciente";
+          const doctorName = appointment.doctor?.person
+            ? `${appointment.doctor.person.firstName} ${appointment.doctor.person.lastNameP}`
+            : "Medico";
+          const dateStr = appointment.startsAt.toLocaleDateString("es-MX", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            timeZone,
           });
-        } else if (reminder.reminderType === "WHATSAPP" && user?.phoneE164) {
-          const ok = await this.whatsapp.sendTextMessage(
-            user.phoneE164,
-            `MediControl: Recordatorio de cita\nPaciente: ${patientName}\nFecha: ${dateStr}\nHora: ${timeStr}\nDoctor: ${doctorName}`,
-            orgId,
-          );
-          await this.updateReminderStatus(reminder.id, ok ? "SENT" : "FAILED", ok ? null : "Error al enviar");
-        } else {
-          await this.updateReminderStatus(reminder.id, "SENT", "Sin canal disponible");
+          const timeStr = appointment.startsAt.toLocaleTimeString("es-MX", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone,
+          });
+
+          const user = await this.prisma.user.findFirst({
+            where: { patient: { id: appointment.patientId }, organizationId: orgId },
+          });
+
+          if (reminder.reminderType === "EMAIL") {
+            const email =
+              user?.email && !user.email.endsWith("@medicontrol.local")
+                ? user.email
+                : null;
+            if (!email) {
+              await this.updateReminderStatus(reminder.id, "SKIPPED", "Sin correo electronico");
+              summary.skipped++;
+              continue;
+            }
+            const html = `<h2>Recordatorio de Cita</h2><p>Hola ${patientName},</p><p>Te recordamos que tienes una cita el <strong>${dateStr}</strong> a las <strong>${timeStr}</strong> con el Dr. ${doctorName}.</p>`;
+            const ok = await this.mail.send(
+              { to: email, subject: "Recordatorio de Cita", html },
+              orgId,
+            );
+            await this.updateReminderStatus(
+              reminder.id,
+              ok ? "SENT" : "FAILED",
+              ok ? null : "Error al enviar",
+            );
+            if (ok) summary.sent++;
+            else summary.failed++;
+            await this.create(orgId, {
+              userId: user!.id,
+              channel: "IN_APP",
+              type: "APPOINTMENT_REMINDER",
+              title: "Recordatorio de Cita",
+              message: `Tienes una cita el ${dateStr} a las ${timeStr} con Dr. ${doctorName}.`,
+              referenceType: "appointment",
+              referenceId: appointment.id,
+            });
+          } else if (reminder.reminderType === "WHATSAPP") {
+            if (!user?.phoneE164) {
+              await this.updateReminderStatus(reminder.id, "SKIPPED", "Sin telefono registrado");
+              summary.skipped++;
+              continue;
+            }
+            const ok = await this.whatsapp.sendTextMessage(
+              user.phoneE164,
+              `MediControl: Recordatorio de cita\nPaciente: ${patientName}\nFecha: ${dateStr}\nHora: ${timeStr}\nDoctor: ${doctorName}`,
+              orgId,
+            );
+            await this.updateReminderStatus(
+              reminder.id,
+              ok ? "SENT" : "FAILED",
+              ok ? null : "Error al enviar",
+            );
+            if (ok) summary.sent++;
+            else summary.failed++;
+          } else {
+            await this.updateReminderStatus(reminder.id, "SKIPPED", "Canal no soportado");
+            summary.skipped++;
+          }
+        } catch (err) {
+          this.logger.error(`Error procesando recordatorio ${reminder.id}`, err);
+          await this.updateReminderStatus(reminder.id, "FAILED", (err as Error).message);
+          summary.failed++;
         }
-      } catch (err) {
-        this.logger.error(`Error procesando recordatorio ${reminder.id}`, err);
-        await this.updateReminderStatus(reminder.id, "FAILED", (err as Error).message);
       }
+    } finally {
+      this.remindersRunning = false;
     }
+
+    this.logger.log(
+      `Recordatorios: ${summary.processed} procesados, ${summary.sent} enviados, ${summary.failed} fallidos, ${summary.skipped} omitidos`,
+    );
+    return summary;
   }
 
   async registerDevice(organizationId: string, userId: string, token: string, platform: string) {

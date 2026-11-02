@@ -297,6 +297,31 @@ export default function SettingsPage() {
     },
   });
 
+  const runRemindersMut = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post("/notifications/run-reminders");
+      return data as {
+        processed: number;
+        sent: number;
+        failed: number;
+        skipped: number;
+        running?: boolean;
+      };
+    },
+    onSuccess: (r) => {
+      setError(null);
+      setNotice(
+        r.running
+          ? "Ya hay un proceso de recordatorios en curso."
+          : `Recordatorios: ${r.processed} procesados, ${r.sent} enviados, ${r.failed} fallidos, ${r.skipped} omitidos.`,
+      );
+    },
+    onError: (e) => {
+      setNotice(null);
+      setError(extractErrorMessage(e));
+    },
+  });
+
   const handleOrgSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -557,6 +582,21 @@ export default function SettingsPage() {
 
       {tab === "integrations" && (
         <div className="space-y-4">
+          <div className="card flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-medium text-ink-900">Recordatorios de citas</h3>
+              <p className="text-xs text-ink-500 mt-1">
+                Procesa ahora los recordatorios pendientes (correo y WhatsApp) con la configuracion actual.
+              </p>
+            </div>
+            <button
+              className="btn-secondary"
+              onClick={() => runRemindersMut.mutate()}
+              disabled={runRemindersMut.isPending}
+            >
+              {runRemindersMut.isPending ? "Procesando..." : "Procesar pendientes"}
+            </button>
+          </div>
           {(data?.integrations ?? []).map((integration) => (
             <IntegrationCard
               key={integration.provider}

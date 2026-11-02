@@ -74,6 +74,13 @@ export class NotificationsController {
   }
 
   @Roles("SUPERADMIN", "ADMIN")
+  @Post("run-reminders")
+  @ApiOperation({ summary: "Procesar ahora los recordatorios pendientes de la clinica" })
+  async runReminders(@CurrentUser() u: AuthenticatedUser) {
+    return this.svc.sendAppointmentReminders(u.organizationId);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN")
   @Post("templates")
   @ApiOperation({ summary: "Crear template de notificacion" })
   async createTemplate(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateNotificationTemplateDto) {

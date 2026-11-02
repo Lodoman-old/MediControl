@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { IntegrationsService } from "../settings/integrations.service";
 import type { CreateAppointmentDto, ConfirmAppointmentDto, UpdateAppointmentDto, AppointmentFilterDto } from "./dto/appointment.dto";
 import type { SelfScheduleDto } from "../auth/dto/self-schedule.dto";
 import type { Doctor } from "@prisma/client";
@@ -20,6 +21,7 @@ export class AppointmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly integrations: IntegrationsService,
   ) {}
 
   async listAppointments(organizationId: string, filter: AppointmentFilterDto) {
@@ -235,7 +237,12 @@ export class AppointmentService {
       },
       include: {
         doctor: { include: { person: true } },
-        patient: { include: { person: true } },
+        patient: {
+          include: {
+            person: true,
+            user: { select: { email: true, phoneE164: true } },
+          },
+        },
         service: true,
       },
     });
@@ -333,13 +340,31 @@ export class AppointmentService {
   }
 
   private async createAppointmentReminders(appointment: any) {
-    const reminders = [
-      { type: "EMAIL", hoursBefore: 24 },
-      { type: "EMAIL", hoursBefore: 1 },
-    ];
-    if (appointment.patient?.phoneE164) {
-      reminders.push({ type: "WHATSAPP", hoursBefore: 1 });
+    const reminders: { type: string; hoursBefore: number }[] = [];
+    const user = appointment.patient?.user;
+
+    const hasRealEmail =
+      typeof user?.email === "string" &&
+      user.email.length > 0 &&
+      !user.email.endsWith("@medicontrol.local");
+
+    if (hasRealEmail) {
+      reminders.push({ type: "EMAIL", hoursBefore: 24 });
+      reminders.push({ type: "EMAIL", hoursBefore: 1 });
     }
+
+    if (user?.phoneE164) {
+      const whatsapp = await this.integrations.getConfig(
+        appointment.organizationId,
+        "WHATSAPP",
+      );
+      if (whatsapp?.isEnabled) {
+        reminders.push({ type: "WHATSAPP", hoursBefore: 1 });
+      }
+    }
+
+    if (reminders.length === 0) return;
+
     const startsAt = new Date(appointment.startsAt);
     for (const r of reminders) {
       const scheduledFor = new Date(startsAt.getTime() - r.hoursBefore * 60 * 60 * 1000);
