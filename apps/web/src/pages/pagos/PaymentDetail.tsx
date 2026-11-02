@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { api, extractErrorMessage } from "@/lib/api";
 import { methodLabel, statusLabel } from "@/lib/roles";
+import { buildPaymentReceiptMessage, openWhatsapp } from "@/lib/whatsapp";
 import { useState } from "react";
 
 interface Payment {
@@ -19,8 +20,11 @@ interface Payment {
   patient?: {
     id: string;
     mrn: string;
-    person?: { fullName?: string; phone?: string; email?: string };
+    person?: { firstName?: string; lastNameP?: string; lastNameM?: string | null } | null;
+    user?: { phoneE164: string | null } | null;
   };
+  appointment?: { service?: { name: string } | null } | null;
+  branch?: { name: string } | null;
 }
 
 const METHOD_BADGE: Record<string, string> = {
@@ -110,6 +114,11 @@ export default function PaymentDetailPage() {
     );
   }
 
+  const patientName = payment.patient?.person
+    ? `${payment.patient.person.firstName ?? ""} ${payment.patient.person.lastNameP ?? ""}`.trim()
+    : "";
+  const patientPhone = payment.patient?.user?.phoneE164 ?? null;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
@@ -165,15 +174,35 @@ export default function PaymentDetailPage() {
         {payment.patient && (
           <div className="border-t border-ink-100 pt-4">
             <p className="text-sm text-ink-500 mb-2">Paciente</p>
-            <p className="text-sm font-medium text-ink-900">{payment.patient.person?.fullName ?? "—"}</p>
+            <p className="text-sm font-medium text-ink-900">{patientName || "—"}</p>
             {payment.patient.mrn && (
               <p className="text-xs text-ink-500 mt-1">NHC: {payment.patient.mrn}</p>
             )}
-            {payment.patient.person?.phone && (
-              <p className="text-xs text-ink-500">Tel: {payment.patient.person.phone}</p>
+            {patientPhone && (
+              <p className="text-xs text-ink-500">Tel: {patientPhone}</p>
             )}
-            {payment.patient.person?.email && (
-              <p className="text-xs text-ink-500">Email: {payment.patient.person.email}</p>
+            {patientPhone && payment.status === "COMPLETED" && (
+              <button
+                onClick={() =>
+                  openWhatsapp(
+                    patientPhone,
+                    buildPaymentReceiptMessage({
+                      patientName,
+                      amount: payment.amount,
+                      currency: payment.currency,
+                      methodLabel: methodLabel(payment.method),
+                      reference: payment.reference,
+                      serviceName: payment.appointment?.service?.name,
+                      branchName: payment.branch?.name,
+                      paidAt: payment.paidAt,
+                      createdAt: payment.createdAt,
+                    }),
+                  )
+                }
+                className="btn-secondary text-xs mt-2"
+              >
+                Enviar recibo por WhatsApp
+              </button>
             )}
           </div>
         )}

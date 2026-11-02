@@ -97,7 +97,16 @@ export class PaymentService {
   async findOne(organizationId: string, id: string) {
     const payment = await this.prisma.payment.findFirst({
       where: { id, organizationId },
-      include: { patient: { include: { person: true } } },
+      include: {
+        patient: {
+          include: {
+            person: true,
+            user: { select: { phoneE164: true } },
+          },
+        },
+        appointment: { select: { service: { select: { name: true } } } },
+        branch: { select: { name: true } },
+      },
     });
     if (!payment) throw new NotFoundException("Pago no encontrado");
     return payment;

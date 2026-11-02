@@ -101,3 +101,55 @@ export function buildPatientGreeting(patientName?: string | null, clinicName?: s
   const name = firstName(patientName);
   return `Hola${name ? ` ${name}` : ""}, le saludamos de${clinicName ? ` ${clinicName}` : " su clinica"}. En que podemos ayudarle?`;
 }
+
+interface PaymentReceiptInput {
+  patientName?: string | null;
+  amount: number | string;
+  currency?: string | null;
+  methodLabel?: string | null;
+  reference?: string | null;
+  serviceName?: string | null;
+  branchName?: string | null;
+  paidAt?: string | null;
+  createdAt: string;
+}
+
+export function buildPaymentReceiptMessage({
+  patientName,
+  amount,
+  currency,
+  methodLabel,
+  reference,
+  serviceName,
+  branchName,
+  paidAt,
+  createdAt,
+}: PaymentReceiptInput): string {
+  const total = Number(amount).toLocaleString("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const date = new Date(paidAt ?? createdAt);
+  const dateText = date.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const timeText = date.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const lines: string[] = [];
+  lines.push(`Hola ${firstName(patientName) || ""}, le compartimos el recibo de su pago:`);
+  lines.push("");
+  if (serviceName) lines.push(`Concepto: ${serviceName}`);
+  lines.push(`Monto: $${total} ${currency ?? "MXN"}`);
+  if (methodLabel) lines.push(`Metodo: ${methodLabel}`);
+  if (reference) lines.push(`Folio: ${reference}`);
+  if (branchName) lines.push(`Sucursal: ${branchName}`);
+  lines.push(`Fecha: ${dateText} ${timeText}`);
+  lines.push("");
+  lines.push("Gracias por su preferencia.");
+  return lines.join("\n");
+}

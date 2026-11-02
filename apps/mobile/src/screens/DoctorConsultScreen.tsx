@@ -15,6 +15,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { colors } from "@medicontrol/brand";
 import { api, extractErrorMessage } from "../lib/api";
+import { buildPatientGreeting, openWhatsapp } from "../lib/whatsapp";
 
 interface Appointment {
   id: string;
@@ -191,6 +192,29 @@ function ConsultActions({ appointment, onBack, onComplete, onViewExpediente }: {
   const [showSoap, setShowSoap] = useState(false);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [showPrescription, setShowPrescription] = useState(false);
+  const [sendingWa, setSendingWa] = useState(false);
+  const [waError, setWaError] = useState<string | null>(null);
+
+  const handleWhatsapp = async () => {
+    setWaError(null);
+    setSendingWa(true);
+    try {
+      const { data } = await api.get(`/patients/${appointment.patientId}`);
+      const phone = (data?.phone as string | null) ?? null;
+      if (!phone) {
+        Alert.alert("Sin telefono", "El paciente no tiene telefono registrado.");
+        return;
+      }
+      const ok = await openWhatsapp(phone, buildPatientGreeting(appointment.patientName));
+      if (!ok) {
+        Alert.alert("Telefono invalido", "No se pudo abrir WhatsApp con ese numero.");
+      }
+    } catch (e) {
+      setWaError(extractErrorMessage(e));
+    } finally {
+      setSendingWa(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -238,6 +262,23 @@ function ConsultActions({ appointment, onBack, onComplete, onViewExpediente }: {
             <Text style={styles.secondaryBtnText}>Ver expediente del paciente</Text>
           </TouchableOpacity>
         )}
+
+        {waError && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{waError}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.secondaryBtn, sendingWa && { opacity: 0.6 }]}
+          activeOpacity={0.85}
+          onPress={handleWhatsapp}
+          disabled={sendingWa}
+        >
+          <Text style={styles.secondaryBtnText}>
+            {sendingWa ? "Abriendo WhatsApp..." : "Contactar por WhatsApp"}
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.completeBtn} activeOpacity={0.85} onPress={onComplete}>
           <Text style={styles.completeBtnText}>Finalizar consulta</Text>
