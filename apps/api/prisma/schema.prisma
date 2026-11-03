@@ -992,6 +992,7 @@ model Medication {
   activeIngredient     String?  @map("active_ingredient") @db.VarChar(255)
   concentration        String?  @db.VarChar(50)
   requiresPrescription Boolean  @default(false) @map("requires_prescription")
+  controlledGroup      String?  @map("controlled_group") @db.VarChar(4)
   price                Decimal  @db.Decimal(12, 2)
   currency             String   @default("MXN") @db.VarChar(3)
   isActive             Boolean  @default(true) @map("is_active")

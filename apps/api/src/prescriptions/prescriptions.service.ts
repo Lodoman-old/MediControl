@@ -48,12 +48,20 @@ export class PrescriptionsService {
     }
 
     let medicationId: string | null = null;
+    let controlledGroup: string | null = null;
     if (dto.medicationId) {
       const med = await this.prisma.medication.findFirst({
         where: { id: dto.medicationId, organizationId, isActive: true },
       });
       if (!med) throw new NotFoundException("Medicamento no encontrado o inactivo");
       medicationId = med.id;
+      controlledGroup = med.controlledGroup;
+    }
+
+    if (controlledGroup === "I" && dto.officialRecetarioConfirmed !== true) {
+      throw new BadRequestException(
+        "Fraccion I: confirma que usaras el recetario especial con codigo de barras de COFEPRIS. Este sistema no genera ese recetario.",
+      );
     }
 
     const rx = await this.prisma.prescription.create({
@@ -152,6 +160,13 @@ export class PrescriptionsService {
       },
     });
     if (!p) throw new NotFoundException("Receta no encontrada");
+
+    const controlledGroup = p.medicationRef?.controlledGroup ?? null;
+    if (controlledGroup === "I") {
+      throw new BadRequestException(
+        "Fraccion I: estos medicamentos requieren recetario especial con codigo de barras de COFEPRIS. Este PDF no es valido para surtirlos.",
+      );
+    }
 
     const patientPerson = p.patient?.person;
     const doctorPerson = p.doctor?.person;
@@ -300,6 +315,12 @@ export class PrescriptionsService {
           { indent: 10 },
         );
       }
+      if (controlledGroup) {
+        doc.moveDown(0.1);
+        doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#a00");
+        doc.text(`GRUPO DE CONTROL: Fracción ${controlledGroup} (LGS art. 226)`, { indent: 10 });
+        doc.fillColor("#333");
+      }
       doc.moveDown(0.2);
       doc.fontSize(9.5).font("Helvetica").fillColor("#333");
       const rxFields: string[] = [
@@ -420,6 +441,15 @@ export class PrescriptionsService {
       orderBy: { prescribedAt: "desc" },
     });
     if (!prescriptions.length) throw new NotFoundException("No hay recetas activas para este paciente");
+
+    const hasControlled = prescriptions.some((rx) =>
+      ["I", "II", "III"].includes(rx.medicationRef?.controlledGroup ?? ""),
+    );
+    if (hasControlled) {
+      throw new BadRequestException(
+        "No se puede generar una receta completa con medicamentos de fracciones I, II o III. Genera una receta individual por medicamento.",
+      );
+    }
 
     const p = prescriptions[0];
     const patientPerson = p.patient?.person;

@@ -4,6 +4,8 @@ import { api, extractErrorMessage } from "@/lib/api";
 
 interface MedOption {
   id: string; name: string; sku: string;
+  presentation?: string; concentration?: string;
+  controlledGroup?: string | null;
   family?: { id: string; name: string; group?: { id: string; name: string } | null } | null;
 }
 
@@ -39,6 +41,10 @@ export default function NewPrescriptionPage() {
   const [selectedMedId, setSelectedMedId] = useState<string | null>(null);
   const [allergyWarnings, setAllergyWarnings] = useState<AllergyWarning[]>([]);
   const [checkingAllergy, setCheckingAllergy] = useState(false);
+  const [officialRecetarioConfirmed, setOfficialRecetarioConfirmed] = useState(false);
+
+  const selectedMed = meds.find((m) => m.id === selectedMedId) ?? null;
+  const controlledGroup = selectedMed?.controlledGroup ?? null;
 
   useEffect(() => {
     api.get("/pharmacy/medications?active=true").then(r => setMeds(r.data ?? [])).catch(() => {});
@@ -52,6 +58,7 @@ export default function NewPrescriptionPage() {
     setMedSearch(med.name);
     setForm(f => ({ ...f, medication: med.name }));
     setSelectedMedId(med.id);
+    setOfficialRecetarioConfirmed(false);
     setShowMeds(false);
 
     if (!patientId) return;
@@ -66,11 +73,16 @@ export default function NewPrescriptionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!patientId) return;
+    if (controlledGroup === "I" && !officialRecetarioConfirmed) {
+      setError("Confirma que usarás el recetario especial COFEPRIS para la fracción I.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await api.post("/prescriptions", {
         patientId,
+        medicationId: selectedMedId ?? undefined,
         medication: form.medication,
         dosage: form.dosage,
         frequency: form.frequency,
@@ -80,6 +92,8 @@ export default function NewPrescriptionPage() {
         refills: Number(form.refills),
         indications: form.indications || undefined,
         notes: form.notes || undefined,
+        officialRecetarioConfirmed:
+          controlledGroup === "I" ? officialRecetarioConfirmed : undefined,
       });
       navigate(backPath);
     } catch (err) {
@@ -130,7 +144,7 @@ export default function NewPrescriptionPage() {
                 className="input w-full"
                 placeholder="Buscar medicamento del catalogo..."
                 value={medSearch}
-                onChange={e => { setMedSearch(e.target.value); setShowMeds(true); setSelectedMedId(null); setAllergyWarnings([]); setForm(f => ({ ...f, medication: e.target.value })); }}
+                onChange={e => { setMedSearch(e.target.value); setShowMeds(true); setSelectedMedId(null); setOfficialRecetarioConfirmed(false); setAllergyWarnings([]); setForm(f => ({ ...f, medication: e.target.value })); }}
                 onFocus={() => setShowMeds(true)}
                 onBlur={() => setTimeout(() => setShowMeds(false), 200)}
               />
@@ -147,6 +161,11 @@ export default function NewPrescriptionPage() {
                     >
                       <span className="font-medium text-ink-900">{m.name}</span>
                       <span className="text-xs text-ink-400 ml-2 font-mono">{m.sku}</span>
+                      {m.controlledGroup && (
+                        <span className="text-xs ml-2 badge bg-danger-100 text-danger-700">
+                          Fraccion {m.controlledGroup}
+                        </span>
+                      )}
                       {m.family && <span className="text-xs text-ink-500 ml-2">{m.family.group?.name ?? ""} &gt; {m.family.name}</span>}
                     </button>
                   ))}
@@ -154,6 +173,54 @@ export default function NewPrescriptionPage() {
               )}
               {checkingAllergy && <p className="text-xs text-ink-500 mt-1">Verificando alergias...</p>}
             </div>
+
+            {controlledGroup && (
+              <div
+                className={`p-3 rounded-lg border text-sm ${
+                  controlledGroup === "I"
+                    ? "bg-danger-50 border-danger-200 text-danger-700"
+                    : controlledGroup === "II" || controlledGroup === "III"
+                      ? "bg-warning-50 border-warning-200 text-warning-700"
+                      : "bg-info-50 border-info-200 text-info-700"
+                }`}
+              >
+                <p className="font-semibold">
+                  {controlledGroup === "I"
+                    ? "Fracción I: requiere recetario especial COFEPRIS"
+                    : controlledGroup === "II"
+                      ? "Fracción II: vigencia 30 días, máximo 2 presentaciones"
+                      : controlledGroup === "III"
+                        ? "Fracción III: vigencia 6 meses, hasta 3 surtidos"
+                        : controlledGroup === "IV"
+                          ? "Fracción IV: antibiótico, vigencia según duración del tratamiento"
+                          : `Fracción ${controlledGroup}`}
+                </p>
+                {controlledGroup === "I" && (
+                  <>
+                    <p className="mt-1">
+                      MediControl no genera el recetario oficial. Usa el recetario con código de barras
+                      autorizado por COFEPRIS y firma autógrafa; el PDF de esta receta no será válido para surtirla.
+                    </p>
+                    <label className="flex items-start gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={officialRecetarioConfirmed}
+                        onChange={(e) => setOfficialRecetarioConfirmed(e.target.checked)}
+                      />
+                      <span>Confirmo que usaré el recetario especial oficial de COFEPRIS.</span>
+                    </label>
+                  </>
+                )}
+                {controlledGroup === "II" && (
+                  <p className="mt-1">Un solo medicamento por receta. La farmacia debe retenerla.</p>
+                )}
+                {controlledGroup === "III" && (
+                  <p className="mt-1">Un solo medicamento por receta. Se puede surtir hasta 3 veces.</p>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Dosis</label>
@@ -204,7 +271,7 @@ export default function NewPrescriptionPage() {
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? "Guardando..." : "Guardar receta"}</button>
+            <button type="submit" disabled={saving || (controlledGroup === "I" && !officialRecetarioConfirmed)} className="btn-primary">{saving ? "Guardando..." : "Guardar receta"}</button>
           </div>
         </form>
       </main>

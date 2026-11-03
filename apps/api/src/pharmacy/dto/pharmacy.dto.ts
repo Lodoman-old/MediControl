@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, IsNumber, IsBoolean, IsEnum, IsArray, Min, ArrayNotEmpty } from "class-validator";
+import { IsOptional, IsString, IsNumber, IsBoolean, IsEnum, IsArray, Min, ArrayNotEmpty, IsIn } from "class-validator";
 import type { PaymentMethod } from "@prisma/client";
 
 export class CreateMedicationDto {
@@ -11,6 +11,8 @@ export class CreateMedicationDto {
   @ApiPropertyOptional() @IsOptional() @IsString() activeIngredient?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() concentration?: string;
   @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() requiresPrescription?: boolean;
+  @ApiPropertyOptional({ enum: ["I", "II", "III", "IV", "V", "VI"], description: "Fraccion del art. 226 LGS" })
+  @IsOptional() @IsIn(["I", "II", "III", "IV", "V", "VI"]) controlledGroup?: string;
   @ApiProperty() @IsNumber() price!: number;
   @ApiPropertyOptional({ default: "MXN" }) @IsOptional() @IsString() currency?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() familyId?: string;
@@ -24,6 +26,8 @@ export class UpdateMedicationDto {
   @ApiPropertyOptional() @IsOptional() @IsString() activeIngredient?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() concentration?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() requiresPrescription?: boolean;
+  @ApiPropertyOptional({ enum: ["I", "II", "III", "IV", "V", "VI"] })
+  @IsOptional() @IsIn(["I", "II", "III", "IV", "V", "VI"]) controlledGroup?: string;
   @ApiPropertyOptional() @IsOptional() @IsNumber() price?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsString() familyId?: string;

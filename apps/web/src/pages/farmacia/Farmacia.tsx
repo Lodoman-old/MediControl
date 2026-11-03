@@ -8,6 +8,7 @@ interface Medication {
   id: string; sku: string; barcode: string | null; name: string; presentation: string;
   activeIngredient: string | null; concentration: string | null;
   requiresPrescription: boolean; price: number; currency: string;
+  controlledGroup: string | null;
   isActive: boolean;
   family?: { id: string; name: string; group?: { id: string; name: string } | null } | null;
 }
@@ -48,7 +49,7 @@ async function fetchFamilies(): Promise<Family[]> {
   return data;
 }
 
-async function createMedication(body: { sku: string; barcode?: string; name: string; presentation: string; price: number; requiresPrescription?: boolean; activeIngredient?: string; concentration?: string }) {
+async function createMedication(body: { sku: string; barcode?: string; name: string; presentation: string; price: number; requiresPrescription?: boolean; controlledGroup?: string; activeIngredient?: string; concentration?: string }) {
   const { data } = await api.post("/pharmacy/medications", body);
   return data;
 }
@@ -58,7 +59,7 @@ async function createBatch(body: { medicationId: string; batchNumber: string; ex
   return data;
 }
 
-async function updateMedication(id: string, body: { name?: string; barcode?: string; presentation?: string; price?: number; requiresPrescription?: boolean; activeIngredient?: string; concentration?: string; familyId?: string }) {
+async function updateMedication(id: string, body: { name?: string; barcode?: string; presentation?: string; price?: number; requiresPrescription?: boolean; controlledGroup?: string; activeIngredient?: string; concentration?: string; familyId?: string }) {
   const { data } = await api.patch(`/pharmacy/medications/${id}`, body);
   return data;
 }
@@ -85,6 +86,7 @@ export default function FarmaciaPage() {
   const [ingredient, setIngredient] = useState("");
   const [conc, setConc] = useState("");
   const [reqRx, setReqRx] = useState(false);
+  const [controlledGroup, setControlledGroup] = useState("");
   const [familyId, setFamilyId] = useState("");
 
   // New batch form
@@ -121,7 +123,7 @@ export default function FarmaciaPage() {
     onError: (e) => setError(extractErrorMessage(e)),
   });
 
-  const resetForm = () => { setSku(""); setBarcode(""); setName(""); setPres(""); setPrice(""); setIngredient(""); setConc(""); setReqRx(false); setFamilyId(""); setMedId(""); setBatchNum(""); setExpiry(""); setInitStock(""); setError(""); };
+  const resetForm = () => { setSku(""); setBarcode(""); setName(""); setPres(""); setPrice(""); setIngredient(""); setConc(""); setReqRx(false); setControlledGroup(""); setFamilyId(""); setMedId(""); setBatchNum(""); setExpiry(""); setInitStock(""); setError(""); };
 
   const handleEditClick = (med: Medication) => {
     setEditingMed(med);
@@ -133,6 +135,7 @@ export default function FarmaciaPage() {
     setIngredient(med.activeIngredient ?? "");
     setConc(med.concentration ?? "");
     setReqRx(med.requiresPrescription);
+    setControlledGroup(med.controlledGroup ?? "");
     setFamilyId(med.family?.id ?? "");
     setShowForm(true);
     setError("");
@@ -141,9 +144,9 @@ export default function FarmaciaPage() {
   const handleMedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingMed) {
-      updateMed.mutate({ id: editingMed.id, name, barcode: barcode || undefined, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined });
+      updateMed.mutate({ id: editingMed.id, name, barcode: barcode || undefined, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, controlledGroup: controlledGroup || undefined, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined });
     } else {
-      createMed.mutate({ sku, barcode: barcode || undefined, name, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined } as any);
+      createMed.mutate({ sku, barcode: barcode || undefined, name, presentation: pres, price: parseFloat(price), requiresPrescription: reqRx, controlledGroup: controlledGroup || undefined, activeIngredient: ingredient || undefined, concentration: conc || undefined, familyId: familyId || undefined } as any);
     }
   };
 
@@ -210,6 +213,23 @@ export default function FarmaciaPage() {
               {(families ?? []).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
+          <div>
+            <label className="label">Grupo de control (LGS art. 226)</label>
+            <select value={controlledGroup} onChange={e => setControlledGroup(e.target.value)} className="input">
+              <option value="">Sin clasificar</option>
+              <option value="I">I - Estupefaciente (recetario COFEPRIS)</option>
+              <option value="II">II - Psicotropico (30 dias, max. 2)</option>
+              <option value="III">III - Psicotropico (6 meses, 3 surtidos)</option>
+              <option value="IV">IV - Antibiotico</option>
+              <option value="V">V - Venta con receta</option>
+              <option value="VI">VI - Venta libre</option>
+            </select>
+            {controlledGroup === "I" && (
+              <p className="text-xs text-danger-600 mt-1">
+                Requiere recetario especial con codigo de barras de COFEPRIS. MediControl no genera ese recetario.
+              </p>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reqRx} onChange={e => setReqRx(e.target.checked)} className="rounded" /> Requiere receta</label>
           <button type="submit" disabled={createMed.isPending || updateMed.isPending} className="btn-primary">{editingMed ? (updateMed.isPending ? "Actualizando..." : "Actualizar") : (createMed.isPending ? "Guardando..." : "Guardar medicamento")}</button>
         </form>
@@ -246,7 +266,7 @@ export default function FarmaciaPage() {
               <td className="px-4 py-3 text-xs text-ink-500">{m.family?.name ?? "—"}</td>
               <td className="px-4 py-3 text-ink-600">{m.presentation}</td>
               <td className="px-4 py-3 font-mono">${Number(m.price).toLocaleString("es-MX")}</td>
-              <td className="px-4 py-3">{m.requiresPrescription ? <span className="badge bg-yellow-100 text-yellow-700">Receta</span> : <span className="text-ink-400">Libre</span>}</td>
+              <td className="px-4 py-3">{m.requiresPrescription ? <span className="badge bg-yellow-100 text-yellow-700">Receta</span> : <span className="text-ink-400">Libre</span>}{m.controlledGroup && <span className="badge bg-danger-100 text-danger-700 ml-1">Fraccion {m.controlledGroup}</span>}</td>
               <td className="px-4 py-3"><button onClick={() => handleEditClick(m)} className="text-primary-600 hover:text-primary-800 text-sm font-medium">Editar</button></td>
             </tr>)}</tbody>
           </table>

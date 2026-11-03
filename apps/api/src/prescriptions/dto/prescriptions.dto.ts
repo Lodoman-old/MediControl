@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, IsInt, IsIn, Min, Max } from "class-validator";
+import { IsOptional, IsString, IsInt, IsIn, IsBoolean, Min, Max } from "class-validator";
 
 export class CreatePrescriptionDto {
   @ApiPropertyOptional()
@@ -60,6 +60,11 @@ export class CreatePrescriptionDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ description: "Confirmacion de uso de recetario especial COFEPRIS (fraccion I)" })
+  @IsOptional()
+  @IsBoolean()
+  officialRecetarioConfirmed?: boolean;
 }
 
 export class SignPrescriptionDto {

@@ -566,7 +566,7 @@ async function main() {
   const meds = [
     { sku: "PARAC-500", barcode: "7501234567891", name: "Paracetamol", presentation: "Tableta", activeIngredient: "Paracetamol", concentration: "500 mg", requiresPrescription: false, price: 35.00 },
     { sku: "IBU-400", barcode: "7501234567892", name: "Ibuprofeno", presentation: "Tableta", activeIngredient: "Ibuprofeno", concentration: "400 mg", requiresPrescription: false, price: 45.00 },
-    { sku: "AMOX-500", barcode: "7501234567893", name: "Amoxicilina", presentation: "Capsula", activeIngredient: "Amoxicilina", concentration: "500 mg", requiresPrescription: true, price: 85.00 },
+    { sku: "AMOX-500", barcode: "7501234567893", name: "Amoxicilina", presentation: "Capsula", activeIngredient: "Amoxicilina", concentration: "500 mg", requiresPrescription: true, controlledGroup: "IV", price: 85.00 },
     { sku: "LORAT-10", barcode: "7501234567894", name: "Loratadina", presentation: "Tableta", activeIngredient: "Loratadina", concentration: "10 mg", requiresPrescription: false, price: 55.00 },
     { sku: "OME-20", barcode: "7501234567895", name: "Omeprazol", presentation: "Capsula", activeIngredient: "Omeprazol", concentration: "20 mg", requiresPrescription: false, price: 65.00 },
     { sku: "DEXA-8", barcode: "7501234567896", name: "Dexametasona", presentation: "Tableta", activeIngredient: "Dexametasona", concentration: "8 mg", requiresPrescription: true, price: 40.00 },
