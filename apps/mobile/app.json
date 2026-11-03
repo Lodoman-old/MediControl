@@ -2,7 +2,7 @@
   "expo": {
     "name": "MediControl",
     "slug": "medicontrol",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "medicontrol",
@@ -25,7 +25,7 @@
     },
     "android": {
       "package": "mx.medicontrol.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#E8F7EE"
@@ -59,3 +59,4 @@
     }
   }
 }
+

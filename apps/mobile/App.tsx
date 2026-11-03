@@ -3,6 +3,8 @@ import type { ErrorInfo, ReactNode } from "react";
 import {
   ActivityIndicator,
   Image,
+  Linking,
+  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -16,7 +18,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { colors, brandName } from "@medicontrol/brand";
 import { api, extractErrorMessage, setApiBaseUrl } from "./src/lib/api";
-import { loadApiBaseUrl, saveApiBaseUrl, DEFAULT_API_BASE_URL } from "./src/lib/apiConfig";
+import { loadApiBaseUrl, saveApiBaseUrl, loadWebBaseUrl, saveWebBaseUrl, DEFAULT_API_BASE_URL, DEFAULT_WEB_BASE_URL } from "./src/lib/apiConfig";
 import { initSentry, captureError } from "./src/lib/sentry";
 import {
   useAuthStore,
@@ -198,10 +200,13 @@ function LoginScreen({
   const [error, setError] = useState<string | null>(null);
   const [showServer, setShowServer] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
+  const [webUrl, setWebUrl] = useState("");
   const [serverLoading, setServerLoading] = useState(false);
 
   const openServerConfig = async () => {
-    setServerUrl(await loadApiBaseUrl());
+    const [api, web] = await Promise.all([loadApiBaseUrl(), loadWebBaseUrl()]);
+    setServerUrl(api);
+    setWebUrl(web);
     setShowServer(true);
     setError(null);
   };
@@ -210,9 +215,13 @@ function LoginScreen({
     setServerLoading(true);
     setError(null);
     try {
-      const saved = await saveApiBaseUrl(serverUrl);
-      setApiBaseUrl(saved);
-      setServerUrl(saved);
+      const [savedApi, savedWeb] = await Promise.all([
+        saveApiBaseUrl(serverUrl),
+        saveWebBaseUrl(webUrl),
+      ]);
+      setApiBaseUrl(savedApi);
+      setServerUrl(savedApi);
+      setWebUrl(savedWeb);
       setShowServer(false);
     } catch (e) {
       setError(extractErrorMessage(e));
@@ -294,6 +303,21 @@ function LoginScreen({
             />
           </View>
           <Text style={styles.serverHint}>Ejemplo: {DEFAULT_API_BASE_URL}</Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>URL del sitio web</Text>
+            <TextInput
+              style={styles.input}
+              value={webUrl}
+              onChangeText={setWebUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder={DEFAULT_WEB_BASE_URL}
+              placeholderTextColor={colors.ink[400]}
+            />
+          </View>
+          <Text style={styles.serverHint}>Ejemplo: {DEFAULT_WEB_BASE_URL}</Text>
 
           {error && (
             <View style={styles.errorBox}>
@@ -720,8 +744,55 @@ function HomeScreen({
   onExpediente: () => void;
   onPharmacy: () => void;
 }) {
-  const isDoctor = user.roles.includes("DOCTOR") || user.roles.includes("ADMIN") || user.roles.includes("SUPERADMIN");
-  const isPatient = user.roles.includes("PATIENT");
+  const roles = user.roles;
+  const isAdmin = roles.includes("ADMIN") || roles.includes("SUPERADMIN");
+  const isDoctor = roles.includes("DOCTOR") || isAdmin;
+  const isPatient = roles.includes("PATIENT");
+  const isReception = roles.includes("RECEPTION");
+  const isCajero = roles.includes("CAJERO");
+  const isNurse = roles.includes("NURSE");
+  const isStaff = isDoctor || isReception || isCajero || isNurse;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [webUrl, setWebUrl] = useState(DEFAULT_WEB_BASE_URL);
+
+  useEffect(() => {
+    let active = true;
+    loadWebBaseUrl()
+      .then((url) => {
+        if (active) setWebUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const openWeb = (path: string) => {
+    setMenuOpen(false);
+    const base = webUrl.replace(/\/+$/, "");
+    Linking.openURL(`${base}${path}`).catch(() => {});
+  };
+
+  const go = (action: () => void) => {
+    setMenuOpen(false);
+    action();
+  };
+
+  const MenuItem = ({
+    label,
+    onPress,
+    detail,
+  }: {
+    label: string;
+    onPress: () => void;
+    detail?: string;
+  }) => (
+    <TouchableOpacity style={styles.drawerItem} activeOpacity={0.7} onPress={onPress}>
+      <Text style={styles.drawerItemText}>{label}</Text>
+      {detail ? <Text style={styles.drawerItemDetail}>{detail}</Text> : null}
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -732,16 +803,17 @@ function HomeScreen({
           style={styles.logo}
           resizeMode="contain"
         />
-        <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Salir</Text>
+        <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.menuBtn}>
+          <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.homeContent}>
         <Text style={styles.title}>Hola, {user.fullName.split(" ")[0]}</Text>
         <Text style={styles.subtitle}>Sesion activa en {brandName}</Text>
+        <Text style={styles.menuHint}>Abre el menu ☰ para ver todos los modulos.</Text>
 
-        {isDoctor && (
+        {isStaff && (
           <>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -789,11 +861,6 @@ function HomeScreen({
           <Text style={styles.cardValue}>{user.roles.join(", ")}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Permisos ({user.permissions.length})</Text>
-          <Text style={styles.cardValueSmall}>{user.permissions.join(", ")}</Text>
-        </View>
-
         <TouchableOpacity
           style={styles.secondaryBtn}
           activeOpacity={0.85}
@@ -802,6 +869,120 @@ function HomeScreen({
           <Text style={styles.secondaryBtnText}>Configurar MFA</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <View style={styles.drawerOverlay}>
+          <View style={styles.drawer}>
+            <Text style={styles.drawerTitle}>Menu</Text>
+            <Text style={styles.drawerUser}>{user.fullName}</Text>
+
+            <ScrollView style={styles.drawerScroll}>
+              <MenuItem label="Inicio" onPress={() => setMenuOpen(false)} />
+
+              {isStaff && (
+                <>
+                  <Text style={styles.drawerSection}>Clinica</Text>
+                  <MenuItem label="Agenda del dia" onPress={() => go(onAgenda)} />
+                  <MenuItem label="Inventario" onPress={() => go(onPharmacy)} />
+                  <MenuItem
+                    label="Pacientes / Expedientes"
+                    detail="Web"
+                    onPress={() => openWeb("/expediente")}
+                  />
+                </>
+              )}
+
+              {isPatient && (
+                <>
+                  <Text style={styles.drawerSection}>Mi cuenta</Text>
+                  <MenuItem label="Mis citas" onPress={() => go(onMyAppointments)} />
+                  <MenuItem label="Mi expediente" onPress={() => go(onExpediente)} />
+                </>
+              )}
+
+              {(isReception || isAdmin) && (
+                <>
+                  <Text style={styles.drawerSection}>Recepcion</Text>
+                  <MenuItem
+                    label="Nueva cita"
+                    detail="Web"
+                    onPress={() => openWeb("/appointments/new")}
+                  />
+                </>
+              )}
+
+              {(isDoctor || isReception || isAdmin) && (
+                <>
+                  <MenuItem label="Pagos" detail="Web" onPress={() => openWeb("/pagos")} />
+                </>
+              )}
+
+              {(isDoctor || isCajero) && (
+                <>
+                  <Text style={styles.drawerSection}>Farmacia</Text>
+                  <MenuItem label="POS / Vender" detail="Web" onPress={() => openWeb("/farmacia/pos")} />
+                  <MenuItem
+                    label="Cola de farmacia"
+                    detail="Web"
+                    onPress={() => openWeb("/farmacia/queue")}
+                  />
+                </>
+              )}
+
+              {(isDoctor || isAdmin) && (
+                <>
+                  <Text style={styles.drawerSection}>Operacion</Text>
+                  <MenuItem label="Horarios" detail="Web" onPress={() => openWeb("/schedule")} />
+                  <MenuItem label="Reportes" detail="Web" onPress={() => openWeb("/reportes")} />
+                </>
+              )}
+
+              {isAdmin && (
+                <>
+                  <Text style={styles.drawerSection}>Administracion</Text>
+                  <MenuItem
+                    label="Configuracion"
+                    detail="Web"
+                    onPress={() => openWeb("/admin/configuracion")}
+                  />
+                  <MenuItem label="Usuarios" detail="Web" onPress={() => openWeb("/admin/users")} />
+                  <MenuItem label="Sucursales" detail="Web" onPress={() => openWeb("/admin/sucursales")} />
+                  <MenuItem label="Ubicaciones" detail="Web" onPress={() => openWeb("/admin/ubicaciones")} />
+                  <MenuItem label="Servicios" detail="Web" onPress={() => openWeb("/admin/servicios")} />
+                  <MenuItem label="Roles" detail="Web" onPress={() => openWeb("/admin/roles")} />
+                </>
+              )}
+
+              <Text style={styles.drawerSection}>Sistema</Text>
+              <MenuItem
+                label="Abrir sistema web completo"
+                detail="Navegador"
+                onPress={() => openWeb("/")}
+              />
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.drawerLogout}
+              onPress={() => {
+                setMenuOpen(false);
+                onLogout();
+              }}
+            >
+              <Text style={styles.drawerLogoutText}>Cerrar sesion</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.drawerBackdrop}
+            activeOpacity={1}
+            onPress={() => setMenuOpen(false)}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1015,6 +1196,97 @@ const styles = StyleSheet.create({
   logoutText: {
     color: colors.primary[700],
     fontWeight: "600",
+  },
+  menuBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.ink[50],
+  },
+  menuIcon: {
+    fontSize: 24,
+    color: colors.ink[800],
+    lineHeight: 28,
+  },
+  menuHint: {
+    fontSize: 13,
+    color: colors.ink[500],
+    marginBottom: 16,
+  },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+  },
+  drawer: {
+    width: 300,
+    maxWidth: "82%",
+    backgroundColor: "#FFFFFF",
+    paddingTop: Platform.OS === "android" ? (RNStatusBar.currentHeight ?? 28) + 16 : 48,
+    paddingHorizontal: 0,
+    paddingBottom: 16,
+  },
+  drawerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.ink[900],
+    paddingHorizontal: 20,
+  },
+  drawerUser: {
+    fontSize: 12,
+    color: colors.ink[500],
+    paddingHorizontal: 20,
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  drawerScroll: {
+    flex: 1,
+  },
+  drawerSection: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.ink[400],
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  drawerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.ink[100],
+  },
+  drawerItemText: {
+    fontSize: 15,
+    color: colors.ink[800],
+  },
+  drawerItemDetail: {
+    fontSize: 10,
+    color: colors.ink[400],
+    textTransform: "uppercase",
+  },
+  drawerBackdrop: {
+    flex: 1,
+  },
+  drawerLogout: {
+    marginTop: 8,
+    marginHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.danger[50],
+    alignItems: "center",
+  },
+  drawerLogoutText: {
+    color: colors.danger[600],
+    fontWeight: "600",
+    fontSize: 15,
   },
   loginContent: {
     padding: 24,
