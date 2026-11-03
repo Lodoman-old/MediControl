@@ -150,6 +150,40 @@ export default function AppointmentDetailPage() {
     } catch (e) { alert(extractErrorMessage(e)); }
   };
 
+  const sharePrescriptionsPdf = async () => {
+    if (!appt) return;
+    try {
+      const res = await api.get(`/prescriptions/patient/${appt.patient.id}/pdf`, {
+        responseType: "blob",
+      });
+      const blob = res.data as Blob;
+      const file = new File([blob], `receta-${appt.patient.mrn}.pdf`, {
+        type: "application/pdf",
+      });
+      const nav = navigator as Navigator & {
+        canShare?: (data: { files?: File[] }) => boolean;
+        share?: (data: ShareData & { files?: File[] }) => Promise<void>;
+      };
+      if (nav.share && nav.canShare?.({ files: [file] })) {
+        await nav.share({
+          files: [file],
+          title: "Receta medica",
+          text: "Le compartimos su receta medica.",
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+        window.alert("PDF descargado. Puedes adjuntarlo manualmente en WhatsApp.");
+      }
+    } catch (e) {
+      alert(extractErrorMessage(e));
+    }
+  };
+
   const downloadLabOrderPdf = async (orderId: string) => {
     try {
       const res = await api.get(`/clinical-records/${appt!.patient.id}/lab-orders/${orderId}/pdf`, { responseType: "blob" });
@@ -492,6 +526,9 @@ export default function AppointmentDetailPage() {
                   Enviar por WhatsApp
                 </button>
               )}
+              <button onClick={sharePrescriptionsPdf} className="btn-secondary text-xs">
+                Compartir PDF
+              </button>
               <button onClick={downloadAllPrescriptionsPdf} className="btn-secondary text-xs">
                 Receta completa PDF
               </button>
