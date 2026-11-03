@@ -94,6 +94,7 @@ export class AdminService {
         lastLoginAt: u.lastLoginAt,
         specialtyCode: u.doctor?.specialtyCode ?? null,
         cedulaProfesional: u.doctor?.cedulaProfesional ?? null,
+        signatureImageUrl: u.doctor?.signatureImageUrl ?? null,
       };
     });
 
@@ -266,6 +267,7 @@ export class AdminService {
       lastLoginAt: user.lastLoginAt,
       specialtyCode: user.doctor?.specialtyCode ?? null,
       cedulaProfesional: user.doctor?.cedulaProfesional ?? null,
+      signatureImageUrl: user.doctor?.signatureImageUrl ?? null,
     };
   }
 
@@ -340,6 +342,7 @@ export class AdminService {
           userId: user.id,
           specialtyCode: dto.specialtyCode ?? "GEN",
           cedulaProfesional: dto.cedulaProfesional ?? "PENDIENTE",
+          signatureImageUrl: dto.signatureImageUrl ?? null,
         },
       });
     }
@@ -363,6 +366,7 @@ export class AdminService {
       lastLoginAt: user.lastLoginAt,
       specialtyCode: user.doctor?.specialtyCode ?? null,
       cedulaProfesional: user.doctor?.cedulaProfesional ?? null,
+      signatureImageUrl: user.doctor?.signatureImageUrl ?? null,
     };
   }
 
@@ -430,6 +434,7 @@ export class AdminService {
             userId,
             specialtyCode: dto.specialtyCode ?? "GEN",
             cedulaProfesional: dto.cedulaProfesional ?? "PENDIENTE",
+          signatureImageUrl: dto.signatureImageUrl ?? null,
           },
         });
       } else if (wantsDoctor && existingDoctor && user.person) {
@@ -438,6 +443,7 @@ export class AdminService {
           data: {
             specialtyCode: dto.specialtyCode ?? existingDoctor.specialtyCode,
             cedulaProfesional: dto.cedulaProfesional ?? existingDoctor.cedulaProfesional,
+            signatureImageUrl: dto.signatureImageUrl ?? existingDoctor.signatureImageUrl,
           },
         });
       }
@@ -447,6 +453,7 @@ export class AdminService {
         const updateDoctor: Record<string, unknown> = {};
         if (dto.specialtyCode !== undefined) updateDoctor.specialtyCode = dto.specialtyCode;
         if (dto.cedulaProfesional !== undefined) updateDoctor.cedulaProfesional = dto.cedulaProfesional;
+        if (dto.signatureImageUrl !== undefined) updateDoctor.signatureImageUrl = dto.signatureImageUrl;
         if (Object.keys(updateDoctor).length > 0) {
           await this.prisma.doctor.update({ where: { id: existingDoctor.id }, data: updateDoctor as any });
         }

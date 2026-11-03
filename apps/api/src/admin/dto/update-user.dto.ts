@@ -37,4 +37,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   cedulaProfesional?: string;
+
+  @ApiProperty({ required: false, description: "URL o data URL de la firma del medico" })
+  @IsOptional()
+  @IsString()
+  signatureImageUrl?: string;
 }

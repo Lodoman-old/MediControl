@@ -36,4 +36,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   cedulaProfesional?: string;
+
+  @ApiProperty({ example: "https://.../firma.png", description: "URL o data URL de la firma del medico", required: false })
+  @IsOptional()
+  @IsString()
+  signatureImageUrl?: string;
 }

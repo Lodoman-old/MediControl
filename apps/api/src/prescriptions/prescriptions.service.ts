@@ -4,6 +4,22 @@ import { NotificationsService } from "../notifications/notifications.service";
 import type { CreatePrescriptionDto, UpdatePrescriptionDto, SignPrescriptionDto } from "./dto/prescriptions.dto";
 import PDFDocument from "pdfkit";
 
+const SPECIALTY_NAMES: Record<string, string> = {
+  GEN: "Medicina General",
+  PED: "Pediatría",
+  GIN: "Ginecología",
+  CAR: "Cardiología",
+  DER: "Dermatología",
+  TRA: "Traumatología",
+  NEU: "Neurología",
+  PSI: "Psiquiatría",
+  OFT: "Oftalmología",
+  ORL: "Otorrinolaringología",
+  URO: "Urología",
+  MED_INT: "Medicina Interna",
+  CIR: "Cirugía General",
+};
+
 @Injectable()
 export class PrescriptionsService {
   private readonly logger = new Logger(PrescriptionsService.name);
@@ -132,6 +148,7 @@ export class PrescriptionsService {
         doctor: {
           include: { person: true, organization: true },
         },
+        medicationRef: true,
       },
     });
     if (!p) throw new NotFoundException("Receta no encontrada");
@@ -150,6 +167,9 @@ export class PrescriptionsService {
     const specialtyCode = p.doctor?.specialtyCode ?? "";
 
     const orgName = p.doctor?.organization?.displayName?.trim() || p.doctor?.organization?.legalName || "";
+    const orgPhone = p.doctor?.organization?.phone ?? "";
+    const orgEmail = p.doctor?.organization?.email ?? "";
+    const orgTimezone = p.doctor?.organization?.timezone || "America/Mexico_City";
     const fiscalAddress = p.doctor?.organization?.fiscalAddress as Record<string, any> | null;
     const addressStr = fiscalAddress
       ? [
@@ -172,7 +192,7 @@ export class PrescriptionsService {
       : null;
 
     const specialtyName = specialtyCode
-      ? specialtyCode.replace(/_/g, " ")
+      ? SPECIALTY_NAMES[specialtyCode] ?? specialtyCode.replace(/_/g, " ")
       : "";
 
     const vitalSigns = await this.prisma.vitalSign.findFirst({
@@ -181,6 +201,10 @@ export class PrescriptionsService {
       },
       orderBy: { measuredAt: "desc" },
     });
+
+    const signatureBuffer = await this.loadSignatureImage(
+      p.doctor?.signatureImageUrl ?? p.digitalSignature,
+    );
 
     return new Promise((resolve) => {
       const doc = new PDFDocument({ margin: 50, size: "LETTER" });
@@ -194,6 +218,10 @@ export class PrescriptionsService {
       // ── DOCTOR HEADER (centered, decreasing font sizes, ALL CAPS) ──
       const centerX = doc.page.width / 2;
 
+      doc.fontSize(9).font("Helvetica-Bold").fillColor("#666");
+      doc.text("RECETA MEDICA", { align: "center" });
+
+      doc.moveDown(0.2);
       doc.fontSize(18).font("Helvetica-Bold").fillColor("#000");
       doc.text("DR. " + doctorName.toUpperCase(), { align: "center" });
 
@@ -204,13 +232,20 @@ export class PrescriptionsService {
       doc.moveDown(0.3);
       doc.fontSize(10).font("Helvetica").fillColor("#444");
       doc.text(
-        `CÉDULA PROFESIONAL: ${cedulaProfesional || "N/A"}    CÉDULA ESPECIALIDAD: ${cedulaEspecialidad || "N/A"}    SSG: ${orgName || "N/A"}`,
+        `Cédula profesional: ${cedulaProfesional || "N/A"}    Cédula especialidad: ${cedulaEspecialidad || "N/A"}`,
         { align: "center" },
       );
 
       doc.moveDown(0.2);
       doc.fontSize(8.5).font("Helvetica").fillColor("#777");
-      doc.text(`DOMICILIO: ${addressStr || orgName || "N/A"}`, { align: "center" });
+      doc.text(`Establecimiento: ${orgName || "N/A"}`, { align: "center" });
+      doc.text(`Domicilio: ${addressStr || orgName || "N/A"}`, { align: "center" });
+      if (orgPhone || orgEmail) {
+        doc.text(
+          [orgPhone && `Tel: ${orgPhone}`, orgEmail && `Correo: ${orgEmail}`].filter(Boolean).join("    "),
+          { align: "center" },
+        );
+      }
 
       // ── SEPARATOR ──
       doc.moveDown(0.8);
@@ -225,6 +260,7 @@ export class PrescriptionsService {
         day: "numeric",
         month: "long",
         year: "numeric",
+        timeZone: orgTimezone,
       });
       const ageStr = age !== null ? `${age} años` : "";
       doc.text(
@@ -255,7 +291,15 @@ export class PrescriptionsService {
 
       // ── MEDICATIONS ──
       doc.fontSize(11).font("Helvetica-Bold").fillColor("#111");
-      doc.text(p.medication, { align: "left" });
+      doc.text(p.medicationRef?.name ?? p.medication, { align: "left" });
+      if (p.medicationRef) {
+        doc.moveDown(0.1);
+        doc.fontSize(8.5).font("Helvetica").fillColor("#555");
+        doc.text(
+          `GENÉRICO: ${p.medicationRef.activeIngredient ?? "No especificado"}    PRESENTACIÓN: ${p.medicationRef.presentation}${p.medicationRef.concentration ? ` ${p.medicationRef.concentration}` : ""}`,
+          { indent: 10 },
+        );
+      }
       doc.moveDown(0.2);
       doc.fontSize(9.5).font("Helvetica").fillColor("#333");
       const rxFields: string[] = [
@@ -296,22 +340,30 @@ export class PrescriptionsService {
       doc.fillColor("#333");
       doc.fontSize(9).font("Helvetica");
 
-      if (p.digitalSignature) {
-        doc.text("FIRMA ELECTRÓNICA (DIGITAL):", margin, sigY, { align: "left" });
+      doc.text("FIRMA DEL MÉDICO:", margin, sigY, { align: "left" });
+
+      if (signatureBuffer) {
+        doc.image(signatureBuffer, margin, sigY + 14, { fit: [180, 45] });
+        doc.y = sigY + 64;
+      } else if (p.digitalSignature) {
         doc.moveDown(0.3);
         doc.fontSize(8).fillColor("#888");
         doc.text(`Firmado digitalmente — ${new Date().toLocaleDateString("es-MX")}`, margin, doc.y, { align: "left" });
-        doc.fillColor("#000");
+        doc.y = Math.max(doc.y, sigY + 42);
       } else {
-        doc.text("FIRMA DEL MÉDICO:", margin, sigY, { align: "left" });
         doc.moveDown(1.2);
         doc.fillColor("#999");
         doc.moveTo(margin, doc.y).lineTo(margin + 200, doc.y).stroke("#999");
         doc.moveDown(0.3);
         doc.fontSize(8).fillColor("#999");
         doc.text("Firma autógrafa del médico", margin, doc.y, { align: "left" });
-        doc.fillColor("#000");
       }
+
+      doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
+      doc.text(doctorName, margin, doc.y + 2, { align: "left" });
+      doc.fontSize(8).font("Helvetica").fillColor("#555");
+      doc.text(`Cédula profesional: ${cedulaProfesional || "N/A"}`, margin, doc.y + 1, { align: "left" });
+      doc.fillColor("#000");
 
       const leftBottomY = doc.y;
 
@@ -335,12 +387,17 @@ export class PrescriptionsService {
       // ── FOOTER ──
       doc.fontSize(7.5).fillColor("#aaa");
       doc.text(
-        "Esta receta es válida únicamente con la firma del médico. Sujeto a las disposiciones de la NOM-072-SSA3-2012.",
+        "Vigencia: 30 días naturales a partir de la fecha de prescripción. Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
+        { align: "center" },
+      );
+      doc.moveDown(0.1);
+      doc.text(
+        "Los medicamentos controlados requieren recetario especial y no se surten con este formato.",
         { align: "center" },
       );
       doc.moveDown(0.2);
       doc.fontSize(7).fillColor("#bbb");
-      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
+      doc.text(`Folio: ${p.id.toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
       doc.fillColor("#000");
 
       doc.end();
@@ -353,6 +410,7 @@ export class PrescriptionsService {
       include: {
         patient: { include: { person: true } },
         doctor: { include: { person: true, organization: true } },
+        medicationRef: true,
       },
       orderBy: { prescribedAt: "desc" },
     });
@@ -373,6 +431,9 @@ export class PrescriptionsService {
     const specialtyCode = p.doctor?.specialtyCode ?? "";
 
     const orgName = p.doctor?.organization?.displayName?.trim() || p.doctor?.organization?.legalName || "";
+    const orgPhone = p.doctor?.organization?.phone ?? "";
+    const orgEmail = p.doctor?.organization?.email ?? "";
+    const orgTimezone = p.doctor?.organization?.timezone || "America/Mexico_City";
     const fiscalAddress = p.doctor?.organization?.fiscalAddress as Record<string, any> | null;
     const addressStr = fiscalAddress
       ? [
@@ -390,15 +451,21 @@ export class PrescriptionsService {
       ? Math.floor((new Date().getTime() - new Date(patientPerson.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
       : null;
 
-    const specialtyName = specialtyCode ? specialtyCode.replace(/_/g, " ") : "";
+    const specialtyName = specialtyCode
+      ? SPECIALTY_NAMES[specialtyCode] ?? specialtyCode.replace(/_/g, " ")
+      : "";
     const dateStr = p.prescribedAt.toLocaleDateString("es-MX", {
-      day: "numeric", month: "long", year: "numeric",
+      day: "numeric", month: "long", year: "numeric", timeZone: orgTimezone,
     });
 
     const vitalSigns = await this.prisma.vitalSign.findFirst({
       where: { appointment: { patientId } },
       orderBy: { measuredAt: "desc" },
     });
+
+    const signatureBuffer = await this.loadSignatureImage(
+      p.doctor?.signatureImageUrl ?? p.digitalSignature,
+    );
 
     return new Promise((resolve) => {
       const doc = new PDFDocument({ margin: 50, size: "LETTER" });
@@ -409,6 +476,10 @@ export class PrescriptionsService {
       const pw = doc.page.width - 100;
       const margin = 50;
 
+      doc.fontSize(9).font("Helvetica-Bold").fillColor("#666");
+      doc.text("RECETA MEDICA", { align: "center" });
+
+      doc.moveDown(0.2);
       doc.fontSize(18).font("Helvetica-Bold").fillColor("#000");
       doc.text("DR. " + doctorName.toUpperCase(), { align: "center" });
       doc.moveDown(0.3);
@@ -417,12 +488,19 @@ export class PrescriptionsService {
       doc.moveDown(0.3);
       doc.fontSize(10).font("Helvetica").fillColor("#444");
       doc.text(
-        `CÉDULA PROFESIONAL: ${cedulaProfesional || "N/A"}    CÉDULA ESPECIALIDAD: ${cedulaEspecialidad || "N/A"}    SSG: ${orgName || "N/A"}`,
+        `Cédula profesional: ${cedulaProfesional || "N/A"}    Cédula especialidad: ${cedulaEspecialidad || "N/A"}`,
         { align: "center" },
       );
       doc.moveDown(0.2);
       doc.fontSize(8.5).font("Helvetica").fillColor("#777");
-      doc.text(`DOMICILIO: ${addressStr || orgName || "N/A"}`, { align: "center" });
+      doc.text(`Establecimiento: ${orgName || "N/A"}`, { align: "center" });
+      doc.text(`Domicilio: ${addressStr || orgName || "N/A"}`, { align: "center" });
+      if (orgPhone || orgEmail) {
+        doc.text(
+          [orgPhone && `Tel: ${orgPhone}`, orgEmail && `Correo: ${orgEmail}`].filter(Boolean).join("    "),
+          { align: "center" },
+        );
+      }
 
       doc.moveDown(0.8);
       doc.fillColor("#ccc");
@@ -466,7 +544,14 @@ export class PrescriptionsService {
         if (yBefore > 650) doc.addPage();
 
         doc.fontSize(10).font("Helvetica-Bold").fillColor("#111");
-        doc.text(`${i + 1}. ${rx.medication}`, { indent: 10 });
+        doc.text(`${i + 1}. ${rx.medicationRef?.name ?? rx.medication}`, { indent: 10 });
+        if (rx.medicationRef) {
+          doc.fontSize(8.5).font("Helvetica").fillColor("#555");
+          doc.text(
+            `   GENÉRICO: ${rx.medicationRef.activeIngredient ?? "No especificado"}    PRESENTACIÓN: ${rx.medicationRef.presentation}${rx.medicationRef.concentration ? ` ${rx.medicationRef.concentration}` : ""}`,
+            { indent: 20 },
+          );
+        }
         doc.fontSize(9).font("Helvetica").fillColor("#333");
         const rxFields: string[] = [
           `DOSIS: ${rx.dosage}`,
@@ -493,12 +578,28 @@ export class PrescriptionsService {
       doc.fillColor("#333");
       doc.fontSize(9).font("Helvetica");
       doc.text("FIRMA DEL MÉDICO:", margin, sigY, { align: "left" });
-      doc.moveDown(1.2);
-      doc.fillColor("#999");
-      doc.moveTo(margin, doc.y).lineTo(margin + 200, doc.y).stroke("#999");
-      doc.moveDown(0.3);
-      doc.fontSize(8).fillColor("#999");
-      doc.text("Firma autógrafa del médico", margin, doc.y, { align: "left" });
+
+      if (signatureBuffer) {
+        doc.image(signatureBuffer, margin, sigY + 14, { fit: [180, 45] });
+        doc.y = sigY + 64;
+      } else if (p.digitalSignature) {
+        doc.moveDown(0.3);
+        doc.fontSize(8).fillColor("#888");
+        doc.text(`Firmado digitalmente — ${new Date().toLocaleDateString("es-MX")}`, margin, doc.y, { align: "left" });
+        doc.y = Math.max(doc.y, sigY + 42);
+      } else {
+        doc.moveDown(1.2);
+        doc.fillColor("#999");
+        doc.moveTo(margin, doc.y).lineTo(margin + 200, doc.y).stroke("#999");
+        doc.moveDown(0.3);
+        doc.fontSize(8).fillColor("#999");
+        doc.text("Firma autógrafa del médico", margin, doc.y, { align: "left" });
+      }
+
+      doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
+      doc.text(doctorName, margin, doc.y + 2, { align: "left" });
+      doc.fontSize(8).font("Helvetica").fillColor("#555");
+      doc.text(`Cédula profesional: ${cedulaProfesional || "N/A"}`, margin, doc.y + 1, { align: "left" });
       doc.fillColor("#000");
 
       const leftBottomY = doc.y;
@@ -518,12 +619,17 @@ export class PrescriptionsService {
 
       doc.fontSize(7.5).fillColor("#aaa");
       doc.text(
-        "Esta receta es válida únicamente con la firma del médico. Sujeto a las disposiciones de la NOM-072-SSA3-2012.",
+        "Vigencia: 30 días naturales a partir de la fecha de prescripción. Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
+        { align: "center" },
+      );
+      doc.moveDown(0.1);
+      doc.text(
+        "Los medicamentos controlados requieren recetario especial y no se surten con este formato.",
         { align: "center" },
       );
       doc.moveDown(0.2);
       doc.fontSize(7).fillColor("#bbb");
-      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
+      doc.text(`Folio: ${p.id.toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
       doc.fillColor("#000");
 
       doc.end();
@@ -537,6 +643,33 @@ export class PrescriptionsService {
       data: { status: "CANCELLED" },
     });
     return { deleted: true };
+  }
+
+  private async loadSignatureImage(value?: string | null): Promise<Buffer | null> {
+    if (!value) return null;
+    try {
+      if (value.startsWith("data:image/")) {
+        const base64 = value.slice(value.indexOf(",") + 1);
+        return base64 ? Buffer.from(base64, "base64") : null;
+      }
+      if (/^https?:\/\//i.test(value)) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        try {
+          const res = await fetch(value, { signal: controller.signal });
+          if (!res.ok) return null;
+          return Buffer.from(await res.arrayBuffer());
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+      if (value.length > 100 && /^[A-Za-z0-9+/=\r\n]+$/.test(value)) {
+        return Buffer.from(value, "base64");
+      }
+    } catch {
+      return null;
+    }
+    return null;
   }
 
   private async notifyPharmacy(

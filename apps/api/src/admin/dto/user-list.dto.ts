@@ -36,6 +36,9 @@ export class UserListItemDto {
 
   @ApiProperty({ example: "12345678", nullable: true })
   cedulaProfesional!: string | null;
+
+  @ApiProperty({ example: null, nullable: true, description: "URL o data URL de la firma del medico" })
+  signatureImageUrl!: string | null;
 }
 
 export class PaginatedUserListDto {

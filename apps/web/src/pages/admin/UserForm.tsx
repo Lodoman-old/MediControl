@@ -51,6 +51,7 @@ interface UserFormData {
   status: string;
   specialtyCode: string;
   cedulaProfesional: string;
+  signatureImageUrl: string;
 }
 
 export default function UserFormPage() {
@@ -68,6 +69,7 @@ export default function UserFormPage() {
     status: "ACTIVE",
     specialtyCode: "GEN",
     cedulaProfesional: "",
+    signatureImageUrl: "",
   });
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -89,6 +91,7 @@ export default function UserFormPage() {
           status: data.status,
           specialtyCode: data.specialtyCode ?? "GEN",
           cedulaProfesional: data.cedulaProfesional ?? "",
+          signatureImageUrl: data.signatureImageUrl ?? "",
         });
       }).catch((err) => setError(extractErrorMessage(err)));
     }
@@ -117,6 +120,7 @@ export default function UserFormPage() {
         if (form.roles.includes("DOCTOR")) {
           body.specialtyCode = form.specialtyCode;
           body.cedulaProfesional = form.cedulaProfesional;
+          body.signatureImageUrl = form.signatureImageUrl.trim() || undefined;
         }
         await api.patch(`/admin/users/${id}`, body);
       } else {
@@ -130,6 +134,7 @@ export default function UserFormPage() {
         if (form.roles.includes("DOCTOR")) {
           body.specialtyCode = form.specialtyCode;
           body.cedulaProfesional = form.cedulaProfesional;
+          body.signatureImageUrl = form.signatureImageUrl.trim() || undefined;
         }
         await api.post("/admin/users", body);
       }
@@ -265,6 +270,26 @@ export default function UserFormPage() {
                   onChange={(e) => setForm({ ...form, cedulaProfesional: e.target.value })}
                   placeholder="Ej. 12345678"
                 />
+              </div>
+              <div>
+                <label className="label">Firma del medico (URL o data URL)</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={form.signatureImageUrl}
+                  onChange={(e) => setForm({ ...form, signatureImageUrl: e.target.value })}
+                  placeholder="https://.../firma.png"
+                />
+                {form.signatureImageUrl && (
+                  <img
+                    src={form.signatureImageUrl}
+                    alt="Firma"
+                    className="mt-2 h-12 object-contain"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                )}
               </div>
             </>
           )}
