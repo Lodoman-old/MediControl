@@ -387,12 +387,17 @@ export class PrescriptionsService {
       // ── FOOTER ──
       doc.fontSize(7.5).fillColor("#aaa");
       doc.text(
-        "Vigencia: 30 días naturales a partir de la fecha de prescripción. Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
+        "Vigencia: fracción I 30 días; fracción II 30 días; fracción III 6 meses; fracción IV duración del tratamiento.",
         { align: "center" },
       );
       doc.moveDown(0.1);
       doc.text(
-        "Los medicamentos controlados requieren recetario especial y no se surten con este formato.",
+        "Fracción I (estupefacientes): requiere recetario especial con código de barras autorizado por COFEPRIS; este formato no lo sustituye.",
+        { align: "center" },
+      );
+      doc.moveDown(0.1);
+      doc.text(
+        "Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
         { align: "center" },
       );
       doc.moveDown(0.2);
@@ -619,12 +624,17 @@ export class PrescriptionsService {
 
       doc.fontSize(7.5).fillColor("#aaa");
       doc.text(
-        "Vigencia: 30 días naturales a partir de la fecha de prescripción. Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
+        "Vigencia: fracción I 30 días; fracción II 30 días; fracción III 6 meses; fracción IV duración del tratamiento.",
         { align: "center" },
       );
       doc.moveDown(0.1);
       doc.text(
-        "Los medicamentos controlados requieren recetario especial y no se surten con este formato.",
+        "Fracción I (estupefacientes): requiere recetario especial con código de barras autorizado por COFEPRIS; este formato no lo sustituye.",
+        { align: "center" },
+      );
+      doc.moveDown(0.1);
+      doc.text(
+        "Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
         { align: "center" },
       );
       doc.moveDown(0.2);
