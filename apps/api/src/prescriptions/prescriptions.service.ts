@@ -315,12 +315,6 @@ export class PrescriptionsService {
           { indent: 10 },
         );
       }
-      if (controlledGroup) {
-        doc.moveDown(0.1);
-        doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#a00");
-        doc.text(`GRUPO DE CONTROL: Fracción ${controlledGroup} (LGS art. 226)`, { indent: 10 });
-        doc.fillColor("#333");
-      }
       doc.moveDown(0.2);
       doc.fontSize(9.5).font("Helvetica").fillColor("#333");
       const rxFields: string[] = [
@@ -382,8 +376,6 @@ export class PrescriptionsService {
 
       doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
       doc.text(doctorName, margin, doc.y + 2, { align: "left" });
-      doc.fontSize(8).font("Helvetica").fillColor("#555");
-      doc.text(`Cédula profesional: ${cedulaProfesional || "N/A"}`, margin, doc.y + 1, { align: "left" });
       doc.fillColor("#000");
 
       const leftBottomY = doc.y;
@@ -406,22 +398,6 @@ export class PrescriptionsService {
       doc.moveDown(1.5);
 
       // ── FOOTER ──
-      doc.fontSize(7.5).fillColor("#aaa");
-      doc.text(
-        "Vigencia: fracción I 30 días; fracción II 30 días; fracción III 6 meses; fracción IV duración del tratamiento.",
-        { align: "center" },
-      );
-      doc.moveDown(0.1);
-      doc.text(
-        "Fracción I (estupefacientes): requiere recetario especial con código de barras autorizado por COFEPRIS; este formato no lo sustituye.",
-        { align: "center" },
-      );
-      doc.moveDown(0.1);
-      doc.text(
-        "Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
-        { align: "center" },
-      );
-      doc.moveDown(0.2);
       doc.fontSize(7).fillColor("#bbb");
       doc.text(`Folio: ${p.id.toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
       doc.fillColor("#000");
@@ -633,8 +609,6 @@ export class PrescriptionsService {
 
       doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#333");
       doc.text(doctorName, margin, doc.y + 2, { align: "left" });
-      doc.fontSize(8).font("Helvetica").fillColor("#555");
-      doc.text(`Cédula profesional: ${cedulaProfesional || "N/A"}`, margin, doc.y + 1, { align: "left" });
       doc.fillColor("#000");
 
       const leftBottomY = doc.y;
@@ -652,22 +626,6 @@ export class PrescriptionsService {
       doc.y = Math.max(leftBottomY, doc.y);
       doc.moveDown(1.5);
 
-      doc.fontSize(7.5).fillColor("#aaa");
-      doc.text(
-        "Vigencia: fracción I 30 días; fracción II 30 días; fracción III 6 meses; fracción IV duración del tratamiento.",
-        { align: "center" },
-      );
-      doc.moveDown(0.1);
-      doc.text(
-        "Fracción I (estupefacientes): requiere recetario especial con código de barras autorizado por COFEPRIS; este formato no lo sustituye.",
-        { align: "center" },
-      );
-      doc.moveDown(0.1);
-      doc.text(
-        "Receta médica conforme a los artículos 29 y 30 del Reglamento de Insumos para la Salud.",
-        { align: "center" },
-      );
-      doc.moveDown(0.2);
       doc.fontSize(7).fillColor("#bbb");
       doc.text(`Folio: ${p.id.toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
       doc.fillColor("#000");
