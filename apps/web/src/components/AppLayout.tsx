@@ -5,6 +5,7 @@ import Logo from "@/components/Logo";
 import { useAuthStore } from "@/stores/authStore";
 import { roleLabels } from "@/lib/roles";
 import { useLogout } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import { api } from "@/lib/api";
 
 interface Props {
@@ -48,6 +49,7 @@ export default function AppLayout({ children }: Props) {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
+  const { data: branding } = useBranding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
@@ -75,6 +77,12 @@ export default function AppLayout({ children }: Props) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (branding?.name) {
+      document.title = `${branding.name} · MediControl`;
+    }
+  }, [branding?.name]);
 
   const displayName = user?.fullName ?? "Cargando...";
   const initials =
@@ -274,7 +282,15 @@ export default function AppLayout({ children }: Props) {
       <header className="bg-white border-b border-ink-100 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <Link to="/dashboard" className="shrink-0">
-            <Logo variant="horizontal" className="h-7 sm:h-9" />
+            {branding?.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.name}
+                className="h-7 sm:h-9 w-auto object-contain"
+              />
+            ) : (
+              <Logo variant="horizontal" className="h-7 sm:h-9" />
+            )}
           </Link>
 
           {!isMobile && (

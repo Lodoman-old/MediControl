@@ -149,7 +149,7 @@ export class PrescriptionsService {
     const cedulaEspecialidad = p.doctor?.cedulaEspecialidad ?? "";
     const specialtyCode = p.doctor?.specialtyCode ?? "";
 
-    const orgName = p.doctor?.organization?.legalName ?? "";
+    const orgName = p.doctor?.organization?.displayName?.trim() || p.doctor?.organization?.legalName || "";
     const fiscalAddress = p.doctor?.organization?.fiscalAddress as Record<string, any> | null;
     const addressStr = fiscalAddress
       ? [
@@ -340,7 +340,7 @@ export class PrescriptionsService {
       );
       doc.moveDown(0.2);
       doc.fontSize(7).fillColor("#bbb");
-      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  MediControl`, { align: "center" });
+      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
       doc.fillColor("#000");
 
       doc.end();
@@ -372,7 +372,7 @@ export class PrescriptionsService {
     const cedulaEspecialidad = p.doctor?.cedulaEspecialidad ?? "";
     const specialtyCode = p.doctor?.specialtyCode ?? "";
 
-    const orgName = p.doctor?.organization?.legalName ?? "";
+    const orgName = p.doctor?.organization?.displayName?.trim() || p.doctor?.organization?.legalName || "";
     const fiscalAddress = p.doctor?.organization?.fiscalAddress as Record<string, any> | null;
     const addressStr = fiscalAddress
       ? [
@@ -523,7 +523,7 @@ export class PrescriptionsService {
       );
       doc.moveDown(0.2);
       doc.fontSize(7).fillColor("#bbb");
-      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  MediControl`, { align: "center" });
+      doc.text(`Folio: ${p.id.slice(0, 8).toUpperCase()}  |  ${orgName || "MediControl"}`, { align: "center" });
       doc.fillColor("#000");
 
       doc.end();

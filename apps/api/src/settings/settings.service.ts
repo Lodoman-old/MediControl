@@ -80,6 +80,29 @@ export class SettingsService {
     return this.getSettings(organizationId);
   }
 
+  async getBranding(organizationId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        legalName: true,
+        displayName: true,
+        logoUrl: true,
+        primaryColor: true,
+        secondaryColor: true,
+      },
+    });
+    if (!org) throw new NotFoundException("Organizacion no encontrada");
+
+    return {
+      name: org.displayName?.trim() || org.legalName,
+      legalName: org.legalName,
+      displayName: org.displayName,
+      logoUrl: org.logoUrl,
+      primaryColor: org.primaryColor,
+      secondaryColor: org.secondaryColor,
+    };
+  }
+
   async updateIntegration(
     organizationId: string,
     provider: string,

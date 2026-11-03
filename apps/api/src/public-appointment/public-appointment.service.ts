@@ -14,11 +14,27 @@ export class PublicAppointmentService {
   async listPublicClinics() {
     const clinics = await this.prisma.organization.findMany({
       where: { branches: { some: { isActive: true } } },
-      select: { id: true, legalName: true, slug: true },
+      select: {
+        id: true,
+        legalName: true,
+        displayName: true,
+        slug: true,
+        logoUrl: true,
+        primaryColor: true,
+        secondaryColor: true,
+      },
       orderBy: { legalName: "asc" },
     });
 
-    return clinics.map((c) => ({ id: c.id, name: c.legalName, slug: c.slug }));
+    return clinics.map((c) => ({
+      id: c.id,
+      name: c.displayName?.trim() || c.legalName,
+      legalName: c.legalName,
+      slug: c.slug,
+      logoUrl: c.logoUrl,
+      primaryColor: c.primaryColor,
+      secondaryColor: c.secondaryColor,
+    }));
   }
 
   async getOrgIdBySlug(slug?: string): Promise<string | null> {

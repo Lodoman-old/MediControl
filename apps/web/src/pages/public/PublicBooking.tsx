@@ -6,7 +6,14 @@ import Logo from "@/components/Logo";
 interface Doctor { id: string; fullName: string; specialtyCode?: string; }
 interface Service { id: string; name: string; durationMin: number; defaultPrice: number; }
 interface Branch { id: string; name: string; }
-interface Clinic { id: string; name: string; slug: string | null; }
+interface Clinic {
+  id: string;
+  name: string;
+  slug: string | null;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+}
 interface Slot { start: string; end: string; }
 interface AvailableSlotsResponse { available: boolean; slots: Slot[]; }
 
@@ -68,6 +75,7 @@ export default function PublicBookingPage() {
   const [submittedData, setSubmittedData] = useState<any>(null);
 
   const hasOrg = Boolean(org.organizationId || org.slug);
+  const pickedClinicInfo = clinics.find((c) => c.id === pickedClinic) ?? null;
   const orgKey = orgQuery(org);
 
   useEffect(() => {
@@ -242,6 +250,24 @@ export default function PublicBookingPage() {
                   <option value="">Seleccionar...</option>
                   {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                {pickedClinicInfo && (
+                  <div className="flex items-center gap-3 rounded-lg border border-ink-100 bg-ink-50/60 px-3 py-2">
+                    {pickedClinicInfo.logoUrl && (
+                      <img
+                        src={pickedClinicInfo.logoUrl}
+                        alt={pickedClinicInfo.name}
+                        className="h-10 w-10 object-contain rounded"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-ink-900">{pickedClinicInfo.name}</p>
+                      <p className="text-xs text-ink-500">Clinica seleccionada</p>
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={() => { if (pickedClinic) setOrg({ organizationId: pickedClinic }); }}
                   className="btn-primary w-full"
