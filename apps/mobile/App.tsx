@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { colors, brandName } from "@medicontrol/brand";
-import { api, extractErrorMessage } from "./src/lib/api";
+import { api, extractErrorMessage, setApiBaseUrl } from "./src/lib/api";
+import { loadApiBaseUrl, saveApiBaseUrl, DEFAULT_API_BASE_URL } from "./src/lib/apiConfig";
 import { initSentry, captureError } from "./src/lib/sentry";
 import {
   useAuthStore,
@@ -81,12 +82,42 @@ function HydrationGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function ApiGate({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    loadApiBaseUrl()
+      .then((url) => {
+        setApiBaseUrl(url);
+      })
+      .finally(() => {
+        if (mounted) setReady(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!ready) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator color={colors.primary[500]} />
+      </SafeAreaView>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <HydrationGate>
-        <AppContent />
-      </HydrationGate>
+      <ApiGate>
+        <HydrationGate>
+          <AppContent />
+        </HydrationGate>
+      </ApiGate>
     </ErrorBoundary>
   );
 }
@@ -165,6 +196,30 @@ function LoginScreen({
   const [mfaCode, setMfaCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showServer, setShowServer] = useState(false);
+  const [serverUrl, setServerUrl] = useState("");
+  const [serverLoading, setServerLoading] = useState(false);
+
+  const openServerConfig = async () => {
+    setServerUrl(await loadApiBaseUrl());
+    setShowServer(true);
+    setError(null);
+  };
+
+  const saveServerConfig = async () => {
+    setServerLoading(true);
+    setError(null);
+    try {
+      const saved = await saveApiBaseUrl(serverUrl);
+      setApiBaseUrl(saved);
+      setServerUrl(saved);
+      setShowServer(false);
+    } catch (e) {
+      setError(extractErrorMessage(e));
+    } finally {
+      setServerLoading(false);
+    }
+  };
 
   const onSubmit = async () => {
     setError(null);
@@ -214,6 +269,69 @@ function LoginScreen({
       setLoading(false);
     }
   };
+
+  if (showServer) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar style="dark" />
+        <ScrollView contentContainerStyle={styles.loginContent} keyboardShouldPersistTaps="handled">
+          <Text style={styles.title}>Configurar servidor</Text>
+          <Text style={styles.subtitle}>
+            Escribe la URL del API de MediControl. Debe terminar en /api/v1.
+          </Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>URL del API</Text>
+            <TextInput
+              style={styles.input}
+              value={serverUrl}
+              onChangeText={setServerUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder={DEFAULT_API_BASE_URL}
+              placeholderTextColor={colors.ink[400]}
+            />
+          </View>
+          <Text style={styles.serverHint}>Ejemplo: {DEFAULT_API_BASE_URL}</Text>
+
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, serverLoading && { opacity: 0.6 }]}
+            activeOpacity={0.85}
+            onPress={saveServerConfig}
+            disabled={serverLoading}
+          >
+            {serverLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryBtnText}>Guardar</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            activeOpacity={0.85}
+            onPress={() => setShowServer(false)}
+          >
+            <Text style={styles.secondaryBtnText}>Cancelar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.serverLink}
+            onPress={() => setServerUrl(DEFAULT_API_BASE_URL)}
+          >
+            <Text style={styles.serverLinkText}>Usar servidor de Render</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (mfaToken) {
     return (
@@ -317,6 +435,13 @@ function LoginScreen({
             <Text style={styles.primaryBtnText}>Ingresar</Text>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.serverLink} onPress={openServerConfig}>
+          <Text style={styles.serverLinkText}>Configurar servidor</Text>
+        </TouchableOpacity>
+        <Text style={styles.serverCurrent}>
+          API: {api.defaults.baseURL ?? DEFAULT_API_BASE_URL}
+        </Text>
 
         <View style={styles.demoBox}>
           <Text style={styles.demoTitle}>Cuentas demo:</Text>
@@ -959,6 +1084,26 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  serverLink: {
+    marginTop: 14,
+    alignItems: "center",
+  },
+  serverLinkText: {
+    color: colors.primary[600],
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  serverCurrent: {
+    marginTop: 6,
+    fontSize: 11,
+    color: colors.ink[400],
+    textAlign: "center",
+  },
+  serverHint: {
+    fontSize: 12,
+    color: colors.ink[500],
+    marginBottom: 16,
   },
   secondaryBtn: {
     paddingVertical: 14,

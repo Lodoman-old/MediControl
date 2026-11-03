@@ -1,24 +1,8 @@
-import Constants from "expo-constants";
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../stores/authStore";
+import { DEFAULT_API_BASE_URL } from "./apiConfig";
 
-function resolveApiUrl(): string {
-  const fromExtra =
-    (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl;
-  if (fromExtra && !fromExtra.includes("localhost")) return fromExtra;
-
-  const hostUri =
-    (Constants.expoConfig as { hostUri?: string } | null)?.hostUri;
-  if (hostUri) {
-    const host = hostUri.split(":")[0];
-    return `http://${host}:3000`;
-  }
-
-  return "http://localhost:3000";
-}
-
-const RAW_API_URL = resolveApiUrl();
-const API_BASE_URL = `${RAW_API_URL}/api/v1`;
+const API_BASE_URL = DEFAULT_API_BASE_URL;
 
 export interface ApiErrorBody {
   statusCode: number;
@@ -31,6 +15,10 @@ export const api = axios.create({
   timeout: 15_000,
   headers: { "Content-Type": "application/json" },
 });
+
+export function setApiBaseUrl(baseUrl: string) {
+  api.defaults.baseURL = baseUrl;
+}
 
 let isRefreshing = false;
 let pendingQueue: Array<(token: string | null) => void> = [];
@@ -78,7 +66,7 @@ api.interceptors.response.use(
         }
         const refreshed = await axios.post<{
           tokens: { accessToken: string; refreshToken: string; accessExpiresIn: number };
-        }>(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+        }>(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
         useAuthStore.getState().setTokens({
           accessToken: refreshed.data.tokens.accessToken,
           refreshToken: refreshed.data.tokens.refreshToken,
