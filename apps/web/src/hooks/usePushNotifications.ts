@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
-import { registerDeviceToken, unregisterDeviceToken } from "@/lib/api";
+import { registerDeviceToken } from "@/lib/api";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 
 export function usePushNotifications() {
@@ -16,25 +16,24 @@ export function usePushNotifications() {
 
     (async () => {
       try {
-        const permResult = await PushNotifications.requestPermissions();
-        if (permResult.receive !== "granted") return;
-
-        await PushNotifications.register();
-
-        PushNotifications.addListener("registration", async ({ value }) => {
-          const platform = Capacitor.getPlatform();
-          await registerDeviceToken(value, platform);
+        await PushNotifications.addListener("registration", async ({ value }) => {
+          try {
+            const platform = Capacitor.getPlatform();
+            await registerDeviceToken(value, platform);
+          } catch (err) {
+            console.error("Push token registration failed:", err);
+          }
         });
 
-        PushNotifications.addListener("registrationError", ({ error }) => {
+        await PushNotifications.addListener("registrationError", ({ error }) => {
           console.error("Push registration error:", error);
         });
 
-        PushNotifications.addListener("pushNotificationReceived", (notification) => {
+        await PushNotifications.addListener("pushNotificationReceived", (notification) => {
           console.log("Push received:", notification);
         });
 
-        PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+        await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
           const data = action.notification.data;
           if (data?.appointmentId) {
             window.location.hash = `/appointments/${data.appointmentId}`;
@@ -42,6 +41,14 @@ export function usePushNotifications() {
             window.location.hash = "/appointments/pending";
           }
         });
+
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== "granted") {
+          console.warn("Permiso de notificaciones no concedido");
+          return;
+        }
+
+        await PushNotifications.register();
       } catch (err) {
         console.error("Push notification setup failed:", err);
       }

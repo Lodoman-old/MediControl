@@ -357,6 +357,11 @@ export class NotificationsService {
   }
 
   async registerDevice(organizationId: string, userId: string, token: string, platform: string) {
+    await this.prisma.deviceToken.updateMany({
+      where: { organizationId, token, userId: { not: userId }, isActive: true },
+      data: { isActive: false },
+    });
+
     const existing = await this.prisma.deviceToken.findUnique({
       where: { userId_token: { userId, token } },
     });
@@ -392,10 +397,16 @@ export class NotificationsService {
     return tokens.map((t) => t.token);
   }
 
-  async sendPushToUser(userId: string, title: string, body: string, data?: Record<string, string>) {
+  async sendPushToUser(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>,
+    organizationId?: string,
+  ) {
     const tokens = await this.getUserDeviceTokens(userId);
     if (tokens.length === 0) return { success: 0, failed: 0 };
-    return this.push.sendToMultipleDevices(tokens, { title, body, data });
+    return this.push.sendToMultipleDevices(tokens, { title, body, data }, organizationId);
   }
 
   private async sendPush(organizationId: string, notificationId: string, dto: CreateNotificationDto) {
@@ -412,7 +423,7 @@ export class NotificationsService {
         referenceType: dto.referenceType ?? "",
         referenceId: dto.referenceId ?? "",
       },
-    });
+    }, organizationId);
     await this.logDelivery(organizationId, notificationId, "PUSH", `tokens:${tokens.length}`, dto.title, dto.message, result.failed === 0);
     await this.updateStatus(notificationId, result.failed === 0 ? "SENT" : "FAILED");
   }

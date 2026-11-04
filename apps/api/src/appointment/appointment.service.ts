@@ -714,6 +714,7 @@ export class AppointmentService {
           "Nueva cita pendiente",
           `${patientName} - ${serviceName} el ${dateStr} a las ${timeStr}`,
           { type: "APPOINTMENT_PENDING_CONFIRMATION", appointmentId: appointment.id },
+          appointment.organizationId,
         );
       }
     } catch (err) {

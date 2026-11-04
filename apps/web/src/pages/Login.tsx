@@ -8,6 +8,7 @@ import { useLogin, useVerifyMfaLogin } from "@/hooks/useAuth";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 import type { AuthUser } from "@/stores/authStore";
 import { extractErrorMessage } from "@/lib/api";
+import { showDemoAccounts } from "@/lib/runtimeFlags";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { BiometricAuth } from "@aparajita/capacitor-biometric-auth";
@@ -359,11 +360,14 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-4 p-3 bg-white/10 lg:bg-white border border-primary-200 lg:border-ink-100 rounded-lg text-xs text-primary-100 lg:text-ink-500">
-            <p className="font-semibold text-white lg:text-ink-700 mb-1">Cuentas demo:</p>
-            <p>admin@medicontrol.mx / Admin123!Demo</p>
-            <p>doctor@medicontrol.mx / Doctor123!Demo</p>
-          </div>
+          {showDemoAccounts && (
+            <div className="mt-4 p-3 bg-white/10 lg:bg-white border border-primary-200 lg:border-ink-100 rounded-lg text-xs text-primary-100 lg:text-ink-500">
+              <p className="font-semibold text-white lg:text-ink-700 mb-1">Cuentas demo:</p>
+              <p>admin@medicontrol.mx / Admin123!Demo</p>
+              <p>doctor@medicontrol.mx / Doctor123!Demo</p>
+              <p>paciente@medicontrol.mx / Paciente123!Demo</p>
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuthStore, type AuthUser } from "@/stores/authStore";
 import { roleLabels } from "@/lib/roles";
+import { showDebugPanel } from "@/lib/runtimeFlags";
 
 interface DashboardStats {
   appointmentsToday: number;
@@ -152,7 +153,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {user && (
+        {user && showDebugPanel && (
           <div className="card mt-6">
             <h2 className="text-lg font-semibold text-ink-900">
               Tu sesion (debug S1)

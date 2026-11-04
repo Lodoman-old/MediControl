@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { roleLabels } from "@/lib/roles";
 import { useLogout } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { api } from "@/lib/api";
 
 interface Props {
@@ -50,6 +51,7 @@ export default function AppLayout({ children }: Props) {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const { data: branding } = useBranding();
+  usePushNotifications();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 

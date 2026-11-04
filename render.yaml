@@ -61,3 +61,7 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://medicontrol-api-h9x3.onrender.com/api/v1
+      - key: VITE_SHOW_DEMO_ACCOUNTS
+        value: "true"
+      - key: VITE_SHOW_DEBUG_PANEL
+        value: "true"
