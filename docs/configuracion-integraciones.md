@@ -32,58 +32,61 @@ Prueba recomendada: generar una invitacion al portal con tu propio correo.
 
 ## Notificaciones push (Firebase Cloud Messaging)
 
-### 1. Configuracion en MediControl
+La APK universal obtiene la configuracion de Firebase desde el API. No es necesario
+colocar `google-services.json` ni recompilar la APK para cada cliente.
+
+### 1. Crear el proyecto Firebase del cliente
+
+En Firebase Console:
+
+1. Crear un proyecto.
+2. Agregar una app Android con el paquete:
+   `com.medicontrol.app`
+3. Obtener de la app Android:
+   - `App ID` (`mobilesdk_app_id`)
+   - `API key`
+4. Obtener el `Project ID` y el `Project number` del proyecto.
+5. En **Cuentas de servicio**, generar una llave privada nueva.
+
+### 2. Configurar en MediControl
 
 **Configuracion → Integraciones → Firebase Cloud Messaging**
 
 Campos:
 
 - `projectId`
-- `clientEmail`
+- `appId`
+- `apiKey`
+- `messagingSenderId` (Project number)
+- `clientEmail` (cuenta de servicio)
 - `privateKey` (llave privada de la cuenta de servicio)
 
-Activa la integracion y guarda. Las credenciales quedan cifradas y el API las lee por organizacion.
+Activa la integracion y guarda. Las credenciales quedan cifradas.
 
-Tambien se pueden usar variables de entorno como respaldo:
+El API entrega a la APK solo la configuracion publica (`projectId`, `appId`, `apiKey`,
+`messagingSenderId`). La llave privada nunca sale del servidor.
 
-```env
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
-```
+### 3. Funcionamiento en la APK
 
-### 2. Configuracion obligatoria en la APK
+Al iniciar sesion, la APK:
 
-Crear el proyecto en Firebase Console y registrar la app Android con paquete:
+1. Consulta `/notifications/push-config`.
+2. Inicializa Firebase en tiempo de ejecucion.
+3. Solicita permiso de notificaciones.
+4. Registra el token del dispositivo.
 
-```text
-com.medicontrol.app
-```
-
-Descargar `google-services.json` y colocarlo en:
-
-```text
-apps/web/android/app/google-services.json
-```
-
-Despues recompilar:
-
-```bash
-pnpm --filter @medicontrol/web build:capacitor
-cd apps/web
-npx cap sync android
-cd android
-./gradlew assembleDebug
-```
+Si cambias de proyecto Firebase desde el panel, la APK toma la nueva configuracion
+la siguiente vez que se abra. Los tokens del proyecto anterior dejan de servir y se
+renuevan automaticamente.
 
 El push solo aplica a la APK Android. La version web del navegador no registra tokens push.
 
-### 3. Prueba
+### 4. Prueba
 
-1. Instalar la APK en un telefono fisico.
+1. Instalar la APK 1.0.7 o superior.
 2. Iniciar sesion y aceptar el permiso de notificaciones.
 3. Verificar que el token quede registrado.
-4. Crear una cita que quede pendiente de confirmacion para un medico.
+4. Crear una cita pendiente de confirmacion para un medico.
 5. El medico debe recibir la notificacion push.
 
 ## Cuentas demo y panel de debug
@@ -99,4 +102,6 @@ VITE_SHOW_DEBUG_PANEL=true
 
 Para produccion: dejar ambas variables sin definir o en `false`.
 
-Importante: ocultar la caja de cuentas demo no elimina los usuarios de la base de datos. En produccion se debe usar una base nueva sin seed demo, o desactivar/cambiar la contrasena de las cuentas demo existentes.
+Importante: ocultar la caja de cuentas demo no elimina los usuarios de la base de datos.
+En produccion se debe usar una base nueva sin seed demo, o desactivar/cambiar la
+contrasena de las cuentas demo existentes.

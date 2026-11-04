@@ -62,6 +62,9 @@ const FIELD_LABELS: Record<string, string> = {
   pass: "Contrasena",
   from: "Remitente (from)",
   projectId: "Project ID",
+  appId: "App ID (mobilesdk_app_id)",
+  apiKey: "API key",
+  messagingSenderId: "Sender ID (project number)",
   clientEmail: "Client email",
   privateKey: "Private key",
   publicKey: "Public key",
@@ -196,6 +199,20 @@ function IntegrationCard({
       {error && (
         <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg">
           <p className="text-sm text-danger-700">{error}</p>
+        </div>
+      )}
+
+      {integration.provider === "FIREBASE" && (
+        <div className="p-3 bg-info-50 border border-info-200 rounded-lg text-xs text-info-700 space-y-1">
+          <p className="font-medium">¿De dónde salen estos datos?</p>
+          <p>
+            En Firebase: Configuración del proyecto → Tus apps → app Android. El
+            <strong> App ID </strong>y la <strong>API key</strong> están en esa pantalla.
+          </p>
+          <p>
+            El <strong>Sender ID</strong> es el número de proyecto (Project number).
+            La <strong>private key</strong> se genera en Cuentas de servicio.
+          </p>
         </div>
       )}
 

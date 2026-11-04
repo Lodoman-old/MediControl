@@ -397,6 +397,10 @@ export class NotificationsService {
     return tokens.map((t) => t.token);
   }
 
+  getPushClientConfig(organizationId: string) {
+    return this.push.getClientConfig(organizationId);
+  }
+
   async sendPushToUser(
     userId: string,
     title: string,

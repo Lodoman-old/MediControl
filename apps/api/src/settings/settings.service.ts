@@ -114,6 +114,12 @@ export class SettingsService {
       throw new BadRequestException("Proveedor de integracion invalido");
     }
     await this.integrations.saveConfig(organizationId, provider, isEnabled, config, updatedBy);
+    if (provider === "FIREBASE") {
+      await this.prisma.deviceToken.updateMany({
+        where: { organizationId },
+        data: { isActive: false },
+      });
+    }
     return this.getSettings(organizationId);
   }
 }

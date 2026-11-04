@@ -53,6 +53,15 @@ export class NotificationsController {
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @Get("push-config")
+  @ApiOperation({
+    summary: "Configuracion publica de Firebase para inicializar push en la APK",
+  })
+  async pushConfig(@CurrentUser() u: AuthenticatedUser) {
+    return this.svc.getPushClientConfig(u.organizationId);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
   @Patch(":id/read")
   @ApiOperation({ summary: "Marcar notificacion como leida" })
   async markAsRead(@CurrentUser() u: AuthenticatedUser, @Param("id") id: string) {

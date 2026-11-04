@@ -47,6 +47,41 @@ export class PushService implements OnModuleInit {
     }
   }
 
+  async getClientConfig(organizationId: string): Promise<{
+    enabled: boolean;
+    config?: {
+      projectId: string;
+      appId: string;
+      apiKey: string;
+      messagingSenderId: string;
+    };
+    reason?: string;
+  }> {
+    const integration = await this.integrations.getConfig(organizationId, "FIREBASE");
+    if (!integration?.isEnabled) {
+      return { enabled: false, reason: "Firebase Cloud Messaging no esta activo" };
+    }
+
+    const projectId = integration.config.projectId?.trim();
+    const appId = integration.config.appId?.trim();
+    const apiKey = integration.config.apiKey?.trim();
+    const messagingSenderId = integration.config.messagingSenderId?.trim();
+    const clientEmail = integration.config.clientEmail?.trim();
+    const privateKey = integration.config.privateKey?.trim();
+    if (!projectId || !appId || !apiKey || !messagingSenderId || !clientEmail || !privateKey) {
+      return {
+        enabled: false,
+        reason:
+          "La configuracion de Firebase esta incompleta (projectId, appId, apiKey, messagingSenderId, clientEmail y privateKey)",
+      };
+    }
+
+    return {
+      enabled: true,
+      config: { projectId, appId, apiKey, messagingSenderId },
+    };
+  }
+
   private readEnvCredentials(): FirebaseCredentials | null {
     const projectId = this.config.get<string>("FIREBASE_PROJECT_ID");
     const clientEmail = this.config.get<string>("FIREBASE_CLIENT_EMAIL");

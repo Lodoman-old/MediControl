@@ -1,18 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
-import { registerDeviceToken } from "@/lib/api";
+import { api, registerDeviceToken } from "@/lib/api";
+import { RemoteFirebase, type RemoteFirebaseOptions } from "@/lib/remoteFirebase";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 
+interface PushConfigResponse {
+  enabled: boolean;
+  config?: RemoteFirebaseOptions;
+  reason?: string;
+}
+
 export function usePushNotifications() {
-  const registered = useRef(false);
   const isAuthed = useAuthStore(selectIsAuthenticated);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     if (!isAuthed) return;
-    if (registered.current) return;
-    registered.current = true;
 
     (async () => {
       try {
@@ -41,6 +45,21 @@ export function usePushNotifications() {
             window.location.hash = "/appointments/pending";
           }
         });
+
+        const { data } = await api.get<PushConfigResponse>("/notifications/push-config");
+        if (!data.enabled || !data.config) {
+          console.warn("Push no configurado:", data.reason ?? "Firebase deshabilitado");
+          return;
+        }
+
+        if (Capacitor.getPlatform() === "android") {
+          try {
+            await RemoteFirebase.configure(data.config);
+          } catch (err) {
+            // APK anterior sin el plugin nativo: se intenta el registro normal
+            console.warn("No se pudo inicializar Firebase remoto:", err);
+          }
+        }
 
         const permResult = await PushNotifications.requestPermissions();
         if (permResult.receive !== "granted") {

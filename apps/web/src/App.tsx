@@ -48,8 +48,11 @@ import DescargarAppPage from "@/pages/DescargarApp";
 import NotificationsPage from "@/pages/notifications/Notifications";
 import PublicBookingPage from "@/pages/public/PublicBooking";
 import ProtectedLayout from "@/components/ProtectedLayout";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function App() {
+  usePushNotifications();
+
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />

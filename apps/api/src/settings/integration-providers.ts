@@ -14,8 +14,15 @@ export const INTEGRATION_PROVIDERS = {
   FIREBASE: {
     label: "Firebase Cloud Messaging",
     description:
-      "Notificaciones push a la APK Android. Requiere google-services.json en la app y la cuenta de servicio de Firebase.",
-    fields: ["projectId", "clientEmail", "privateKey"],
+      "Notificaciones push a la APK Android. Carga la configuracion publica de la app y la cuenta de servicio del proyecto Firebase del cliente.",
+    fields: [
+      "projectId",
+      "appId",
+      "apiKey",
+      "messagingSenderId",
+      "clientEmail",
+      "privateKey",
+    ],
     secrets: ["privateKey"],
   },
   MERCADOPAGO: {
