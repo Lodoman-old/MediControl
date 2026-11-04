@@ -1086,18 +1086,12 @@ function PatientAppointmentsScreen({ onBack }: { onBack: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/appointments", {
-          params: { limit: 50 },
-        });
-        const userAppts = (data?.data ?? []).filter(
-          (a: any) => a.patientName?.toLowerCase().includes((user?.fullName ?? "").toLowerCase().split(" ")[0]?.toLowerCase() ?? ""),
-        );
-        setAppointments(userAppts.length > 0 ? userAppts : (data?.data ?? []));
+        const { data } = await api.get("/appointments/me/list");
+        setAppointments(Array.isArray(data) ? data : (data?.data ?? []));
       } catch (e) {
         setError(extractErrorMessage(e));
       } finally {
@@ -1108,7 +1102,7 @@ function PatientAppointmentsScreen({ onBack }: { onBack: () => void }) {
 
   const cancelAppt = async (id: string) => {
     try {
-      await api.patch(`/appointments/${id}`, { status: "CANCELED" });
+      await api.patch(`/appointments/${id}/cancel`);
       setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status: "CANCELED" } : a)));
     } catch (e) {
       setError(extractErrorMessage(e));

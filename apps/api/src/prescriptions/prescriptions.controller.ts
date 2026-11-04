@@ -24,14 +24,14 @@ export class PrescriptionsController {
   @ApiOperation({ summary: "Listar recetas de un paciente" })
   @Get("patient/:patientId")
   async findByPatient(@CurrentUser() user: AuthenticatedUser, @Param("patientId") patientId: string) {
-    return this.rx.findByPatient(user.organizationId, patientId);
+    return this.rx.findByPatient(user.organizationId, patientId, user);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
   @ApiOperation({ summary: "Descargar todas las recetas activas de un paciente en un solo PDF" })
   @Get("patient/:patientId/pdf")
   async getPatientPdf(@CurrentUser() user: AuthenticatedUser, @Param("patientId") patientId: string, @Res() res: Response) {
-    const pdf = await this.rx.generatePatientPdf(user.organizationId, patientId);
+    const pdf = await this.rx.generatePatientPdf(user.organizationId, patientId, user);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="recetas-${patientId.slice(0, 8)}.pdf"`,
@@ -44,7 +44,7 @@ export class PrescriptionsController {
   @ApiOperation({ summary: "Obtener receta por ID" })
   @Get(":id")
   async findOne(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
-    return this.rx.findOne(user.organizationId, id);
+    return this.rx.findOne(user.organizationId, id, user);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR")
@@ -65,7 +65,7 @@ export class PrescriptionsController {
   @ApiOperation({ summary: "Descargar receta en PDF" })
   @Get(":id/pdf")
   async getPdf(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
-    const pdf = await this.rx.generatePdf(user.organizationId, id);
+    const pdf = await this.rx.generatePdf(user.organizationId, id, user);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="receta-${id.slice(0, 8)}.pdf"`,

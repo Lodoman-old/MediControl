@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestEx
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import type { CreatePrescriptionDto, UpdatePrescriptionDto, SignPrescriptionDto } from "./dto/prescriptions.dto";
+import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import PDFDocument from "pdfkit";
 
 const SPECIALTY_NAMES: Record<string, string> = {
@@ -93,7 +94,8 @@ export class PrescriptionsService {
     return rx;
   }
 
-  async findByPatient(organizationId: string, patientId: string) {
+  async findByPatient(organizationId: string, patientId: string, user?: AuthenticatedUser) {
+    await this.verifyPatientAccess(organizationId, patientId, user);
     return this.prisma.prescription.findMany({
       where: { organizationId, patientId },
       include: {
@@ -103,7 +105,7 @@ export class PrescriptionsService {
     });
   }
 
-  async findOne(organizationId: string, id: string) {
+  async findOne(organizationId: string, id: string, user?: AuthenticatedUser) {
     const p = await this.prisma.prescription.findFirst({
       where: { id, organizationId },
       include: {
@@ -112,6 +114,7 @@ export class PrescriptionsService {
       },
     });
     if (!p) throw new NotFoundException("Receta no encontrada");
+    await this.verifyPatientAccess(organizationId, p.patientId, user);
     return p;
   }
 
@@ -146,7 +149,7 @@ export class PrescriptionsService {
     });
   }
 
-  async generatePdf(organizationId: string, id: string): Promise<Buffer> {
+  async generatePdf(organizationId: string, id: string, user?: AuthenticatedUser): Promise<Buffer> {
     const p = await this.prisma.prescription.findFirst({
       where: { id, organizationId },
       include: {
@@ -161,6 +164,7 @@ export class PrescriptionsService {
     });
     if (!p) throw new NotFoundException("Receta no encontrada");
 
+    await this.verifyPatientAccess(organizationId, p.patientId, user);
     const controlledGroup = p.medicationRef?.controlledGroup ?? null;
     if (controlledGroup === "I") {
       throw new BadRequestException(
@@ -406,7 +410,8 @@ export class PrescriptionsService {
     });
   }
 
-  async generatePatientPdf(organizationId: string, patientId: string): Promise<Buffer> {
+  async generatePatientPdf(organizationId: string, patientId: string, user?: AuthenticatedUser): Promise<Buffer> {
+    await this.verifyPatientAccess(organizationId, patientId, user);
     const prescriptions = await this.prisma.prescription.findMany({
       where: { organizationId, patientId, status: "ACTIVE" },
       include: {
@@ -668,6 +673,21 @@ export class PrescriptionsService {
       return null;
     }
     return null;
+  }
+
+  private async verifyPatientAccess(
+    organizationId: string,
+    patientId: string,
+    user?: AuthenticatedUser,
+  ) {
+    if (!user?.roles.includes("PATIENT")) return;
+    const patient = await this.prisma.patient.findFirst({
+      where: { id: patientId, organizationId },
+      select: { userId: true },
+    });
+    if (!patient || patient.userId !== user.userId) {
+      throw new ForbiddenException("No tienes acceso a este expediente");
+    }
   }
 
   private async notifyPharmacy(

@@ -20,6 +20,7 @@ import AppointmentDetailPage from "@/pages/agenda/AppointmentDetail";
 import SchedulePage from "@/pages/schedule/Schedule";
 import TriagePage from "@/pages/triage/Triage";
 import RegisterPatientPage from "@/pages/pacientes/RegisterPatient";
+import PatientPortalPage from "@/pages/portal/PatientPortal";
 import PatientListPage from "@/pages/expediente/PatientList";
 import ExpedientePage from "@/pages/expediente/Expediente";
 import NewNotePage from "@/pages/expediente/NewNote";
@@ -37,6 +38,7 @@ import POSPage from "@/pages/farmacia/POS";
 import PharmacyQueuePage from "@/pages/farmacia/PharmacyQueue";
 import SalesHistoryPage from "@/pages/farmacia/SalesHistory";
 import SalesReportPage from "@/pages/farmacia/SalesReport";
+import TicketViewPage from "@/pages/tickets/TicketView";
 import InventoryAdjustmentPage from "@/pages/farmacia/InventoryAdjustment";
 import CashRegisterPage from "@/pages/farmacia/CashRegister";
 import ReportesPage from "@/pages/reportes/Reportes";
@@ -61,6 +63,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <DashboardPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/portal"
+        element={
+          <ProtectedLayout requiredRoles={["PATIENT"]}>
+            <PatientPortalPage />
           </ProtectedLayout>
         }
       />
@@ -293,6 +303,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <PaymentDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/tickets/:kind/:id"
+        element={
+          <ProtectedLayout>
+            <TicketViewPage />
           </ProtectedLayout>
         }
       />

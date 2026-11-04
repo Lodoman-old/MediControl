@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, Headers, Req } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Param, Query, Headers, Req, Res } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiExcludeEndpoint } from "@nestjs/swagger";
 import { PaymentService } from "./payment.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -6,7 +6,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { Public } from "../auth/decorators/public.decorator";
 import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { CreatePaymentDto, UpdatePaymentStatusDto, PaymentFilterDto } from "./dto/payment.dto";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 
 @ApiTags("Pagos")
 @ApiBearerAuth()
@@ -43,6 +43,19 @@ export class PaymentController {
   @Get()
   async findAll(@CurrentUser() user: AuthenticatedUser, @Query() filters?: PaymentFilterDto) {
     return this.payment.findAll(user.organizationId, filters);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")
+  @ApiOperation({ summary: "Ticket imprimible del pago" })
+  @Get(":id/ticket")
+  async getTicket(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Res() res: Response,
+  ) {
+    const html = await this.payment.getTicket(user.organizationId, id);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")

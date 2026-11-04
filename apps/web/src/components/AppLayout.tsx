@@ -100,6 +100,7 @@ export default function AppLayout({ children }: Props) {
   const isReception = roles.includes("RECEPTION");
   const isNurse = roles.includes("NURSE");
   const isCajero = roles.includes("CAJERO");
+  const isPatient = roles.includes("PATIENT");
   const hasClinicalAccess = roles.some((r) => ["ADMIN", "DOCTOR", "NURSE", "RECEPTION", "SUPERADMIN"].includes(r));
 
   const { data: unreadCount } = useQuery({
@@ -129,9 +130,22 @@ export default function AppLayout({ children }: Props) {
 
   const navItems = (
     <>
-      <Link to="/agenda" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
-        Agenda
-      </Link>
+      {isPatient && (
+        <>
+          <Link to="/portal" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
+            Mi portal
+          </Link>
+          <Link to="/reservar" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
+            Reservar cita
+          </Link>
+        </>
+      )}
+
+      {!isPatient && (
+        <Link to="/agenda" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
+          Agenda
+        </Link>
+      )}
 
       {isNurse && (
         <Link to="/triage" className="text-sm text-ink-600 hover:text-ink-900 font-medium whitespace-nowrap">
@@ -204,7 +218,15 @@ export default function AppLayout({ children }: Props) {
 
   const mobileNavItems = (
     <>
-      <MobileNavLink to="/agenda">Agenda</MobileNavLink>
+      {isPatient && (
+        <>
+          <div className="px-4 py-2 text-xs font-semibold text-ink-400 uppercase tracking-wider bg-ink-50/50">Mi cuenta</div>
+          <MobileNavLink to="/portal">Mi portal</MobileNavLink>
+          <MobileNavLink to="/reservar">Reservar cita</MobileNavLink>
+        </>
+      )}
+
+      {!isPatient && <MobileNavLink to="/agenda">Agenda</MobileNavLink>}
 
       {isNurse && (
         <MobileNavLink to="/triage">Triage</MobileNavLink>
@@ -281,7 +303,7 @@ export default function AppLayout({ children }: Props) {
     <div className="min-h-screen flex flex-col bg-surface-alt">
       <header className="bg-white border-b border-ink-100 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <Link to="/dashboard" className="shrink-0">
+          <Link to={isPatient ? "/portal" : "/dashboard"} className="shrink-0">
             {branding?.logoUrl ? (
               <img
                 src={branding.logoUrl}

@@ -82,3 +82,20 @@ export function dateOnly(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(Date.UTC(year!, month! - 1, day!));
 }
+
+/** Fecha de pared (YYYY-MM-DD) de un instante en la zona indicada. */
+export function dateInTimeZone(instant: Date, timeZone: string): string {
+  const parts = formatterFor(timeZone).formatToParts(instant);
+  const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** Primer instante (UTC) del dia de pared indicado. */
+export function dayStartUtc(dateStr: string, timeZone: string): Date {
+  return wallTimeToUtc(dateStr, "00:00", timeZone);
+}
+
+/** Ultimo instante (UTC) del dia de pared indicado, inclusivo. */
+export function dayEndUtc(dateStr: string, timeZone: string): Date {
+  return new Date(dayStartUtc(shiftDate(dateStr, 1), timeZone).getTime() - 1);
+}

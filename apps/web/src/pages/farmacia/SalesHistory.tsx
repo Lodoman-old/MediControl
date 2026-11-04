@@ -6,15 +6,32 @@ import { api } from "@/lib/api";
 import { methodLabel } from "@/lib/roles";
 
 interface Sale {
-  id: string; total: number; method: string; status: string;
-  paymentReference: string | null; createdAt: string;
-  patient?: { person?: { fullName?: string } };
+  id: string;
+  total: number;
+  method: string;
+  status: string;
+  paymentReference: string | null;
+  createdAt: string;
+  patient?: {
+    person?: {
+      firstName?: string | null;
+      lastNameP?: string | null;
+      lastNameM?: string | null;
+    } | null;
+  } | null;
   items: Array<{ medication: { name: string }; quantity: number; totalPrice: number }>;
 }
 
 async function fetchSales(): Promise<Sale[]> {
   const { data } = await api.get<Sale[]>("/pharmacy/sales");
   return data;
+}
+
+function patientName(sale: Sale): string {
+  const person = sale.patient?.person;
+  if (!person) return "Público general";
+  const name = [person.firstName, person.lastNameP, person.lastNameM].filter(Boolean).join(" ");
+  return name || "Público general";
 }
 
 export default function SalesHistoryPage() {
@@ -34,16 +51,25 @@ export default function SalesHistoryPage() {
             <th className="px-4 py-3 font-medium">Fecha</th><th className="px-4 py-3 font-medium">Cliente</th>
             <th className="px-4 py-3 font-medium">Items</th><th className="px-4 py-3 font-medium">Total</th>
             <th className="px-4 py-3 font-medium">Metodo</th><th className="px-4 py-3 font-medium">Ref</th>
+            <th className="px-4 py-3 font-medium text-right">Ticket</th>
           </tr></thead>
-          <tbody>{isLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center text-ink-500">Cargando...</td></tr>
-            : !sales?.length ? <tr><td colSpan={6} className="px-4 py-8 text-center text-ink-500">Sin ventas</td></tr>
+          <tbody>{isLoading ? <tr><td colSpan={7} className="px-4 py-8 text-center text-ink-500">Cargando...</td></tr>
+            : !sales?.length ? <tr><td colSpan={7} className="px-4 py-8 text-center text-ink-500">Sin ventas</td></tr>
             : sales.map(s => <tr key={s.id} className="border-t border-ink-100 hover:bg-ink-50">
               <td className="px-4 py-3">{format(parseISO(s.createdAt), "dd/MM/yyyy HH:mm", { locale: es })}</td>
-              <td className="px-4 py-3 font-medium">{s.patient?.person?.fullName ?? "Publico general"}</td>
+              <td className="px-4 py-3 font-medium">{patientName(s)}</td>
               <td className="px-4 py-3">{s.items.reduce((a, i) => a + i.quantity, 0)}</td>
               <td className="px-4 py-3 font-mono">${Number(s.total).toLocaleString("es-MX")}</td>
               <td className="px-4 py-3"><span className="badge bg-blue-100 text-blue-700">{methodLabel(s.method)}</span></td>
               <td className="px-4 py-3 text-xs font-mono text-ink-500">{s.paymentReference ?? "—"}</td>
+              <td className="px-4 py-3 text-right">
+                <button
+                  onClick={() => navigate(`/tickets/venta/${s.id}`)}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-800"
+                >
+                  Imprimir
+                </button>
+              </td>
             </tr>)}</tbody>
         </table>
       </div>

@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Res } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { PharmacyService } from "./pharmacy.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -118,6 +119,19 @@ export class PharmacyController {
   @Get("sales/summary/daily")
   async dailySalesSummary(@CurrentUser() u: AuthenticatedUser, @Query("date") date?: string) {
     return this.pharm.getDailySalesSummary(u.organizationId, date);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")
+  @ApiOperation({ summary: "Ticket imprimible de una venta" })
+  @Get("sales/:id/ticket")
+  async getSaleTicket(
+    @CurrentUser() u: AuthenticatedUser,
+    @Param("id") id: string,
+    @Res() res: Response,
+  ) {
+    const html = await this.pharm.getSaleTicket(u.organizationId, id);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "CAJERO")

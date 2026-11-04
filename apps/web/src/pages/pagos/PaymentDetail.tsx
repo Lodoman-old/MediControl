@@ -125,7 +125,15 @@ export default function PaymentDetailPage() {
         <button onClick={() => navigate("/pagos")} className="text-sm text-primary-600 hover:text-primary-800">
           &larr; Volver a pagos
         </button>
-        <h2 className="text-2xl font-semibold text-ink-900 mt-1">Detalle de pago</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+          <h2 className="text-2xl font-semibold text-ink-900">Detalle de pago</h2>
+          <button
+            onClick={() => navigate(`/tickets/pago/${payment.id}`)}
+            className="btn-secondary text-sm"
+          >
+            Imprimir ticket
+          </button>
+        </div>
       </div>
 
       <div className="card space-y-4">

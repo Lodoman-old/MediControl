@@ -55,7 +55,7 @@ export default function LoginPage() {
       if (user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
-        const from = (location.state as FromState | null)?.from?.pathname ?? "/dashboard";
+        const from = (location.state as FromState | null)?.from?.pathname ?? (user?.roles.includes("PATIENT") ? "/portal" : "/dashboard");
         navigate(from, { replace: true });
       }
     } else {
@@ -105,7 +105,7 @@ export default function LoginPage() {
       if (result.user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
-        const from = (location.state as FromState | null)?.from?.pathname ?? "/dashboard";
+        const from = (location.state as FromState | null)?.from?.pathname ?? (result.user?.roles.includes("PATIENT") ? "/portal" : "/dashboard");
         navigate(from, { replace: true });
       }
     } catch (err) {
@@ -124,7 +124,7 @@ export default function LoginPage() {
       if (result.user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
-        navigate("/dashboard", { replace: true });
+        navigate(result.user?.roles.includes("PATIENT") ? "/portal" : "/dashboard", { replace: true });
       }
     } catch (err) {
       setMfaError(extractErrorMessage(err));

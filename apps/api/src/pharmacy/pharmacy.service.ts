@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateMedicationDto, UpdateMedicationDto, CreateBatchDto, CreateStockMovementDto, CreateSaleDto, CreateDispensingDto, CreateAllergyDto } from "./dto/pharmacy.dto";
+import { renderTicketHtml } from "../common/ticket-html";
 
 @Injectable()
 export class PharmacyService {
@@ -276,10 +277,67 @@ export class PharmacyService {
   async getSale(organizationId: string, id: string) {
     const sale = await this.prisma.sale.findFirst({
       where: { id, organizationId },
-      include: { items: { include: { medication: true, batch: true, dispensing: { include: { prescription: true } } } }, patient: { include: { person: true } } },
+      include: {
+        items: {
+          include: {
+            medication: true,
+            batch: true,
+            dispensing: { include: { prescription: true } },
+          },
+        },
+        patient: { include: { person: true } },
+        branch: { select: { name: true, address: true, phone: true } },
+        organization: {
+          select: {
+            legalName: true,
+            displayName: true,
+            rfc: true,
+            fiscalAddress: true,
+            phone: true,
+            email: true,
+            timezone: true,
+          },
+        },
+      },
     });
     if (!sale) throw new NotFoundException("Venta no encontrada");
     return sale;
+  }
+
+  async getSaleTicket(organizationId: string, id: string): Promise<string> {
+    const sale = await this.getSale(organizationId, id);
+    const person = sale.patient?.person;
+    const patientName = person
+      ? [person.firstName, person.lastNameP, person.lastNameM].filter(Boolean).join(" ")
+      : "Público general";
+
+    return renderTicketHtml(
+      {
+        title: "Ticket de venta",
+        folio: `VENTA-${sale.id.slice(0, 8).toUpperCase()}`,
+        date: sale.createdAt,
+        status: sale.status,
+        paymentMethod: sale.method,
+        patientName,
+        patientMrn: sale.patient?.mrn ?? null,
+        lines: sale.items.map((item) => ({
+          description: item.medication?.name ?? "Medicamento",
+          detail: item.medication?.presentation ?? null,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          total: Number(item.totalPrice),
+        })),
+        subtotal: Number(sale.subtotal),
+        tax: Number(sale.tax),
+        total: Number(sale.total),
+        currency: "MXN",
+        notes: sale.notes,
+        organization: sale.organization,
+        branch: sale.branch,
+        footer: "Gracias por su preferencia. Este documento no es un comprobante fiscal.",
+      },
+      sale.organization.timezone,
+    );
   }
 
   async getDailySalesSummary(organizationId: string, date?: string) {

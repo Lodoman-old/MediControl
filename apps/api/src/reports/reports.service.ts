@@ -1,13 +1,37 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { dateInTimeZone, dayEndUtc, dayStartUtc } from "../common/timezone";
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async resolveRange(organizationId: string, from?: string, to?: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    const timezone = org?.timezone ?? "America/Mexico_City";
+    const isDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const today = dateInTimeZone(new Date(), timezone);
+    const monthStart = `${today.slice(0, 7)}-01`;
+
+    const fromDate = from
+      ? isDateOnly(from)
+        ? dayStartUtc(from, timezone)
+        : new Date(from)
+      : dayStartUtc(monthStart, timezone);
+    const toDate = to
+      ? isDateOnly(to)
+        ? dayEndUtc(to, timezone)
+        : new Date(to)
+      : new Date();
+
+    return { fromDate, toDate };
+  }
+
   async revenue(organizationId: string, from?: string, to?: string, groupBy?: string) {
-    const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const toDate = to ? new Date(to) : new Date();
+    const { fromDate, toDate } = await this.resolveRange(organizationId, from, to);
 
     const where: any = {
       organizationId,
@@ -51,8 +75,7 @@ export class ReportsService {
   }
 
   async appointments(organizationId: string, from?: string, to?: string) {
-    const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const toDate = to ? new Date(to) : new Date();
+    const { fromDate, toDate } = await this.resolveRange(organizationId, from, to);
 
     const where: any = {
       organizationId,
@@ -77,8 +100,7 @@ export class ReportsService {
   }
 
   async patients(organizationId: string, from?: string, to?: string) {
-    const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const toDate = to ? new Date(to) : new Date();
+    const { fromDate, toDate } = await this.resolveRange(organizationId, from, to);
 
     const total = await this.prisma.patient.count({ where: { organizationId } });
 
@@ -104,8 +126,7 @@ export class ReportsService {
   }
 
   async doctors(organizationId: string, from?: string, to?: string) {
-    const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const toDate = to ? new Date(to) : new Date();
+    const { fromDate, toDate } = await this.resolveRange(organizationId, from, to);
 
     const doctors = await this.prisma.doctor.findMany({
       where: { organizationId },

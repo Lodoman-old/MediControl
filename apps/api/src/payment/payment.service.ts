@@ -8,6 +8,7 @@ import { MercadoPagoStrategy } from "./strategies/mercadopago.strategy";
 import type { PaymentStrategy, ProcessPaymentParams } from "./payment.types";
 import type { CreatePaymentDto, PaymentFilterDto, UpdatePaymentStatusDto } from "./dto/payment.dto";
 import type { PaymentMethod, PaymentStatus } from "@prisma/client";
+import { renderTicketHtml } from "../common/ticket-html";
 
 @Injectable()
 export class PaymentService {
@@ -104,12 +105,86 @@ export class PaymentService {
             user: { select: { phoneE164: true } },
           },
         },
-        appointment: { select: { service: { select: { name: true } } } },
-        branch: { select: { name: true } },
+        appointment: {
+          select: {
+            startsAt: true,
+            service: { select: { name: true } },
+            doctor: { include: { person: true } },
+          },
+        },
+        branch: { select: { name: true, address: true, phone: true } },
+        organization: {
+          select: {
+            legalName: true,
+            displayName: true,
+            rfc: true,
+            fiscalAddress: true,
+            phone: true,
+            email: true,
+            timezone: true,
+          },
+        },
       },
     });
     if (!payment) throw new NotFoundException("Pago no encontrado");
     return payment;
+  }
+
+  async getTicket(organizationId: string, id: string): Promise<string> {
+    const payment = await this.findOne(organizationId, id);
+    const person = payment.patient?.person;
+    const patientName = person
+      ? [person.firstName, person.lastNameP, person.lastNameM].filter(Boolean).join(" ")
+      : null;
+    const doctorPerson = payment.appointment?.doctor?.person;
+    const rawDoctorName = doctorPerson
+      ? [doctorPerson.firstName, doctorPerson.lastNameP].filter(Boolean).join(" ")
+      : null;
+    const doctorName = rawDoctorName
+      ? /^dr\.?\s/i.test(rawDoctorName)
+        ? rawDoctorName
+        : `Dr. ${rawDoctorName}`
+      : null;
+    const amount = Number(payment.amount);
+    const serviceName = payment.appointment?.service?.name ?? "Consulta médica";
+
+    return renderTicketHtml(
+      {
+        title: "Ticket de consulta",
+        folio: `PAGO-${payment.id.slice(0, 8).toUpperCase()}`,
+        date: payment.paidAt ?? payment.createdAt,
+        status: payment.status,
+        paymentMethod: payment.method,
+        patientName,
+        patientMrn: payment.patient?.mrn ?? null,
+        doctorName,
+        serviceName,
+        lines: [
+          {
+            description: serviceName,
+            detail: payment.appointment?.startsAt
+              ? `Cita: ${new Date(payment.appointment.startsAt).toLocaleString("es-MX", {
+                  timeZone: payment.organization.timezone,
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}`
+              : null,
+            quantity: 1,
+            unitPrice: amount,
+            total: amount,
+          },
+        ],
+        subtotal: amount,
+        tax: 0,
+        total: amount,
+        currency: payment.currency,
+        notes: payment.notes,
+        organization: payment.organization,
+        branch: payment.branch,
+        footer: "Gracias por su preferencia. Este documento no es un comprobante fiscal.",
+      },
+      payment.organization.timezone,
+    );
   }
 
   async updateStatus(organizationId: string, id: string, dto: UpdatePaymentStatusDto) {
