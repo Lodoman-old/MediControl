@@ -28,6 +28,58 @@ export default function PatientListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invitePatient, setInvitePatient] = useState<PatientListItem | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteResult, setInviteResult] = useState<{
+    email: string;
+    invitationUrl: string;
+    emailSent: boolean;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const openInvitation = (patient: PatientListItem) => {
+    setInvitePatient(patient);
+    setInviteEmail(patient.email ?? "");
+    setInviteError(null);
+    setInviteResult(null);
+    setCopied(false);
+  };
+
+  const closeInvitation = () => {
+    setInvitePatient(null);
+    setInviteResult(null);
+    setInviteError(null);
+    setCopied(false);
+  };
+
+  const sendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invitePatient) return;
+    setInviteLoading(true);
+    setInviteError(null);
+    try {
+      const { data } = await api.post("/patients/" + invitePatient.id + "/portal-invitation", {
+        email: inviteEmail.trim() || undefined,
+      });
+      setInviteResult(data);
+    } catch (err) {
+      setInviteError(extractErrorMessage(err));
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const copyInvitation = async () => {
+    if (!inviteResult) return;
+    try {
+      await navigator.clipboard.writeText(inviteResult.invitationUrl);
+      setCopied(true);
+    } catch {
+      setInviteError("No se pudo copiar el enlace. Seleccionalo y copialo manualmente.");
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -98,6 +150,13 @@ export default function PatientListPage() {
                   <td className="px-4 py-3">{p.bloodType ? <span className="badge">{p.bloodType}</span> : "—"}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => openInvitation(p)}
+                        className="btn-secondary text-xs"
+                        title="Generar enlace para que el paciente entre al portal"
+                      >
+                        Portal
+                      </button>
                       {p.phone && (
                         <button
                           onClick={() =>
@@ -145,6 +204,101 @@ export default function PatientListPage() {
           </div>
         )}
       </div>
+
+      {invitePatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-ink-900">Acceso al portal</h3>
+                <p className="text-sm text-ink-500">
+                  {invitePatient.fullName} · {invitePatient.mrn}
+                </p>
+              </div>
+              <button onClick={closeInvitation} className="text-ink-400 hover:text-ink-700 text-xl leading-none">
+                ×
+              </button>
+            </div>
+
+            {!inviteResult ? (
+              <form onSubmit={sendInvitation} className="space-y-4">
+                <p className="text-sm text-ink-600">
+                  Generaremos un enlace de un solo uso para que el paciente cree su contraseña.
+                </p>
+                <div>
+                  <label htmlFor="invite-email" className="label">Correo del paciente</label>
+                  <input
+                    id="invite-email"
+                    type="email"
+                    className="input"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="paciente@correo.com"
+                    required
+                  />
+                </div>
+
+                {inviteError && (
+                  <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg">
+                    <p className="text-sm text-danger-700">{inviteError}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={closeInvitation} className="btn-secondary text-sm">
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={inviteLoading} className="btn-primary text-sm">
+                    {inviteLoading ? "Generando..." : "Generar invitación"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className={`p-3 rounded-lg border ${inviteResult.emailSent ? "bg-success-50 border-success-200" : "bg-warning-50 border-warning-200"}`}>
+                  <p className={`text-sm ${inviteResult.emailSent ? "text-success-700" : "text-warning-700"}`}>
+                    {inviteResult.emailSent
+                      ? `Correo enviado a ${inviteResult.email}.`
+                      : `No hay correo configurado para enviar. Comparte el enlace con el paciente por WhatsApp o copialo.`}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-ink-500 mb-1">Enlace de acceso</p>
+                  <div className="flex gap-2">
+                    <input readOnly value={inviteResult.invitationUrl} className="input flex-1 text-xs font-mono" />
+                    <button type="button" onClick={copyInvitation} className="btn-secondary text-sm shrink-0">
+                      {copied ? "Copiado" : "Copiar"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-ink-400 mt-1">Expira en 1 hora y solo puede usarse una vez.</p>
+                </div>
+
+                {invitePatient.phone && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openWhatsapp(
+                        invitePatient.phone!,
+                        `Hola ${invitePatient.fullName}, tu clínica creó tu acceso al portal de pacientes. Crea tu contraseña aquí: ${inviteResult.invitationUrl}`,
+                      )
+                    }
+                    className="btn-primary w-full text-sm"
+                  >
+                    Enviar por WhatsApp
+                  </button>
+                )}
+
+                <div className="flex justify-end">
+                  <button type="button" onClick={closeInvitation} className="btn-secondary text-sm">
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

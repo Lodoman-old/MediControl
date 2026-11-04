@@ -560,6 +560,52 @@ export class AuthService {
     };
   }
 
+  private buildPortalUrl(pathAndQuery: string): string {
+    const base = (this.config.get<string>("PORTAL_URL", "http://localhost:5173") ?? "")
+      .replace(/\/+$/, "");
+    const path = pathAndQuery.startsWith("/") ? pathAndQuery : `/${pathAndQuery}`;
+    return `${base}/#${path}`;
+  }
+
+  private async createPasswordResetToken(userId: string): Promise<string> {
+    await this.prisma.passwordResetToken.updateMany({
+      where: { userId, usedAt: null, expiresAt: { gte: new Date() } },
+      data: { usedAt: new Date() },
+    });
+
+    const token = randomBytes(32).toString("hex");
+    const tokenHash = await argonHash(token);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.prisma.passwordResetToken.create({
+      data: { userId, tokenHash, expiresAt },
+    });
+
+    return token;
+  }
+
+  async sendPortalInvitation(userId: string): Promise<{ invitationUrl: string; emailSent: boolean }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { person: true },
+    });
+    if (!user) throw new BadRequestException("Usuario no encontrado");
+
+    const token = await this.createPasswordResetToken(user.id);
+    const invitationUrl = this.buildPortalUrl(`/reset-password?token=${token}`);
+    const fullName = user.person
+      ? `${user.person.firstName} ${user.person.lastNameP}`
+      : user.email;
+    const html = `<h2>Activa tu portal de paciente</h2><p>Hola ${fullName},</p><p>Tu clinica creo acceso al portal de pacientes de MediControl.</p><p>Haz clic en el siguiente enlace para crear tu contrasena:</p><p><a href="${invitationUrl}">${invitationUrl}</a></p><p>Este enlace expira en 1 hora.</p>`;
+    const emailSent = await this.mail.send(
+      { to: user.email, subject: "Activa tu portal de paciente - MediControl", html },
+      user.organizationId,
+    );
+
+    this.logger.log(`Invitacion al portal generada para ${user.email} (emailSent=${emailSent})`);
+    return { invitationUrl, emailSent };
+  }
+
   async forgotPassword(email: string): Promise<{ message: string }> {
     const user = await this.prisma.user.findFirst({
       where: { email },
@@ -569,27 +615,11 @@ export class AuthService {
       return { message: "Si el email existe, recibiras un enlace de recuperacion" };
     }
 
-    await this.prisma.passwordResetToken.updateMany({
-      where: { userId: user.id, usedAt: null, expiresAt: { gte: new Date() } },
-      data: { usedAt: new Date() },
-    });
-
-    const token = randomBytes(32).toString("hex");
-    const tokenHash = await argonHash(token);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-    await this.prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt,
-      },
-    });
-
+    const token = await this.createPasswordResetToken(user.id);
     const fullName = user.person
       ? `${user.person.firstName} ${user.person.lastNameP}`
       : user.email;
-    const resetUrl = `${this.config.get<string>("PORTAL_URL", "http://localhost:5173")}/reset-password?token=${token}`;
+    const resetUrl = this.buildPortalUrl(`/reset-password?token=${token}`);
     const html = `<h2>Recuperacion de Contrasena</h2><p>Hola ${fullName},</p><p>Recibiste este correo porque solicitaste restablecer tu contrasena.</p><p>Haz clic en el siguiente enlace para crear una nueva contrasena:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Este enlace expira en 1 hora.</p><p>Si no solicitaste este cambio, ignora este mensaje.</p>`;
 
     await this.mail.send({ to: user.email, subject: "Recuperacion de Contrasena - MediControl", html }, user.organizationId);

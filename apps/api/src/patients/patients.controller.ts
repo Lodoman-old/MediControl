@@ -7,6 +7,7 @@ import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
 import { UpdatePatientProfileDto } from "../auth/dto/register.dto";
 import { CreatePatientByStaffDto } from "./dto/create-patient-staff.dto";
 import { QuickCreatePatientDto } from "./dto/quick-create-patient.dto";
+import { PortalInvitationDto } from "./dto/portal-invitation.dto";
 
 @ApiTags("Pacientes")
 @ApiBearerAuth()
@@ -74,6 +75,21 @@ export class PatientsController {
   @Get("me/medical-history")
   async getMyMedicalHistory(@CurrentUser() user: AuthenticatedUser) {
     return this.patients.getMedicalHistory(user.organizationId, user.userId);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "RECEPTION")
+  @ApiOperation({
+    summary: "Invitar al portal del paciente",
+    description: "Genera un enlace de un solo uso para que el paciente cree su contrasena y active su portal.",
+  })
+  @Post(":id/portal-invitation")
+  @HttpCode(HttpStatus.OK)
+  async inviteToPortal(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: PortalInvitationDto,
+  ) {
+    return this.patients.inviteToPortal(user.organizationId, id, dto);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION")

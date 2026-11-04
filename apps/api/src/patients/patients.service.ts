@@ -4,13 +4,22 @@ import type { UpdatePatientProfileDto } from "../auth/dto/register.dto";
 import { hash as argonHash } from "@node-rs/argon2";
 import type { CreatePatientByStaffDto } from "./dto/create-patient-staff.dto";
 import type { QuickCreatePatientDto } from "./dto/quick-create-patient.dto";
+import type { PortalInvitationDto } from "./dto/portal-invitation.dto";
+import { AuthService } from "../auth/auth.service";
 import { randomBytes } from "crypto";
+
+function isTemporaryEmail(email: string | null | undefined): boolean {
+  return !email || email.toLowerCase().endsWith("@medicontrol.local");
+}
 
 @Injectable()
 export class PatientsService {
   private readonly logger = new Logger(PatientsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auth: AuthService,
+  ) {}
 
   async createPatientByStaff(organizationId: string, dto: CreatePatientByStaffDto) {
     const existing = await this.prisma.user.findFirst({
@@ -155,6 +164,88 @@ export class PatientsService {
     };
   }
 
+  async inviteToPortal(
+    organizationId: string,
+    patientId: string,
+    dto: PortalInvitationDto,
+  ) {
+    const patient = await this.prisma.patient.findFirst({
+      where: { id: patientId, organizationId },
+      include: { person: true, user: true },
+    });
+    if (!patient) throw new NotFoundException("Paciente no encontrado");
+
+    const requestedEmail = dto.email?.trim().toLowerCase() || null;
+    const currentEmail = patient.user?.email?.toLowerCase() ?? null;
+    const targetEmail = requestedEmail ?? (isTemporaryEmail(currentEmail) ? null : currentEmail);
+    if (!targetEmail) {
+      throw new BadRequestException(
+        "El paciente aun no tiene correo registrado. Proporciona un correo para enviar la invitacion.",
+      );
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        organizationId,
+        email: targetEmail,
+        ...(patient.userId ? { NOT: { id: patient.userId } } : {}),
+      },
+    });
+    if (existing) {
+      throw new ConflictException("Ya existe un usuario con ese correo en esta organizacion");
+    }
+
+    let userId = patient.userId;
+    if (!userId) {
+      const temporaryPassword = randomBytes(12).toString("base64url");
+      const user = await this.prisma.user.create({
+        data: {
+          organizationId,
+          personId: patient.personId,
+          email: targetEmail,
+          passwordHash: await argonHash(temporaryPassword),
+          status: "ACTIVE",
+          mustChangePassword: true,
+        },
+      });
+      userId = user.id;
+      await this.prisma.patient.update({
+        where: { id: patient.id },
+        data: { userId: user.id },
+      });
+    } else if (requestedEmail && requestedEmail !== currentEmail) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { email: targetEmail },
+      });
+    }
+
+    const patientRole = await this.prisma.role.findFirst({
+      where: { organizationId, code: "PATIENT" },
+    });
+    if (patientRole) {
+      const hasRole = await this.prisma.userRole.findFirst({
+        where: { userId, roleId: patientRole.id },
+      });
+      if (!hasRole) {
+        await this.prisma.userRole.create({
+          data: { organizationId, userId, roleId: patientRole.id },
+        });
+      }
+    }
+
+    const invitation = await this.auth.sendPortalInvitation(userId);
+    this.logger.log(`Invitacion al portal para paciente ${patient.id} / ${targetEmail}`);
+
+    return {
+      patientId: patient.id,
+      mrn: patient.mrn,
+      email: targetEmail,
+      invitationUrl: invitation.invitationUrl,
+      emailSent: invitation.emailSent,
+    };
+  }
+
   async listPatients(organizationId: string, query: { page?: number; limit?: number; search?: string }) {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
@@ -187,7 +278,7 @@ export class PatientsService {
         id: p.id,
         mrn: p.mrn,
         fullName: `${p.person.firstName} ${p.person.lastNameP}${p.person.lastNameM ? " " + p.person.lastNameM : ""}`,
-        email: p.user?.email ?? null,
+        email: isTemporaryEmail(p.user?.email) ? null : (p.user?.email ?? null),
         phone: p.user?.phoneE164 ?? null,
         bloodType: p.bloodType,
       })),
@@ -343,7 +434,7 @@ export class PatientsService {
       id: patient.id,
       mrn: patient.mrn,
       fullName: `${patient.person.firstName} ${patient.person.lastNameP}${patient.person.lastNameM ? " " + patient.person.lastNameM : ""}`,
-      email: patient.user?.email ?? null,
+      email: isTemporaryEmail(patient.user?.email) ? null : (patient.user?.email ?? null),
       phone: patient.user?.phoneE164 ?? null,
       bloodType: patient.bloodType,
       emergencyContact: patient.emergencyContact,
