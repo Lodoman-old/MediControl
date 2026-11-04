@@ -12,6 +12,7 @@ interface Doctor {
 interface Patient {
   id: string;
   fullName: string;
+  mrn?: string;
 }
 
 interface Service {
@@ -97,6 +98,100 @@ function SearchableSelect<T extends { id: string; fullName: string }>({
   );
 }
 
+function PatientSearchSelect({
+  selected,
+  onSelect,
+}: {
+  selected: Patient | null;
+  onSelect: (patient: Patient | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [items, setItems] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/patients", {
+          params: { search: search.trim() || undefined, limit: 20 },
+        });
+        if (active) setItems(data?.data ?? []);
+      } catch {
+        if (active) setItems([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [open, search]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <input
+        type="text"
+        className="input"
+        placeholder="Buscar por nombre o expediente..."
+        value={open ? search : (selected?.fullName ?? "")}
+        onChange={(e) => {
+          onSelect(null);
+          setSearch(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          setOpen(true);
+          setSearch("");
+        }}
+      />
+      {!open && selected?.mrn && (
+        <p className="text-xs text-ink-400 mt-1">Expediente: {selected.mrn}</p>
+      )}
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-ink-200 rounded-lg shadow-lg max-h-56 overflow-y-auto z-50 w-full">
+          {loading && <p className="px-3 py-2 text-sm text-ink-400">Buscando...</p>}
+          {!loading && items.length === 0 && (
+            <p className="px-3 py-2 text-sm text-ink-400">Sin resultados</p>
+          )}
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-ink-50 ${
+                item.id === selected?.id ? "bg-primary-50 font-medium" : ""
+              }`}
+              onClick={() => {
+                onSelect(item);
+                setOpen(false);
+                setSearch("");
+              }}
+            >
+              <span>{item.fullName}</span>
+              {item.mrn && (
+                <span className="text-xs text-ink-400 ml-2 font-mono">{item.mrn}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function NewAppointmentPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -104,7 +199,6 @@ export default function NewAppointmentPage() {
   const [loading, setLoading] = useState(false);
 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [serviceLocations, setServiceLocations] = useState<ServiceLocation[]>([]);
@@ -114,6 +208,7 @@ export default function NewAppointmentPage() {
   const [serviceLocationId, setServiceLocationId] = useState("");
   const [doctorId, setDoctorId] = useState("");
   const [patientId, setPatientId] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [serviceId, setServiceId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState("");
@@ -125,9 +220,6 @@ export default function NewAppointmentPage() {
     api.get("/admin/users?limit=100&role=DOCTOR").then((r) => {
       setDoctors(r.data.data ?? []);
     }).catch(() => setDoctors([]));
-    api.get("/patients?limit=100").then((r) => {
-      setPatients(r.data.data ?? r.data ?? []);
-    }).catch(() => setPatients([]));
     api.get("/admin/branches").then(({ data }: any) => setBranches(data?.data ?? data ?? [])).catch(() => {});
     api.get("/services").then(({ data }: any) => setServices(data?.data ?? data ?? [])).catch(() => {});
   }, []);
@@ -308,11 +400,12 @@ export default function NewAppointmentPage() {
                   + Nuevo
                 </button>
               </div>
-              <SearchableSelect
-                items={patients}
-                value={patientId}
-                onChange={setPatientId}
-                placeholder="Buscar paciente..."
+              <PatientSearchSelect
+                selected={selectedPatient}
+                onSelect={(p) => {
+                  setSelectedPatient(p);
+                  setPatientId(p?.id ?? "");
+                }}
               />
             </div>
           </div>
@@ -394,7 +487,7 @@ export default function NewAppointmentPage() {
         open={showQuickPatient}
         onClose={() => setShowQuickPatient(false)}
         onCreated={(p) => {
-          setPatients((prev) => [...prev, p]);
+          setSelectedPatient(p);
           setPatientId(p.id);
         }}
       />
