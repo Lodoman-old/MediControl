@@ -55,8 +55,8 @@ export default function LoginPage() {
       if (user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
-        const from = (location.state as FromState | null)?.from?.pathname ?? (user?.roles.includes("PATIENT") ? "/portal" : "/dashboard");
-        navigate(from, { replace: true });
+        const from = (location.state as FromState | null)?.from?.pathname;
+        navigate(user?.roles.includes("PATIENT") ? "/portal" : (from ?? "/dashboard"), { replace: true });
       }
     } else {
       setCheckingSession(false);
@@ -105,8 +105,8 @@ export default function LoginPage() {
       if (result.user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
-        const from = (location.state as FromState | null)?.from?.pathname ?? (result.user?.roles.includes("PATIENT") ? "/portal" : "/dashboard");
-        navigate(from, { replace: true });
+        const from = (location.state as FromState | null)?.from?.pathname;
+        navigate(result.user?.roles.includes("PATIENT") ? "/portal" : (from ?? "/dashboard"), { replace: true });
       }
     } catch (err) {
       console.error(extractErrorMessage(err));
