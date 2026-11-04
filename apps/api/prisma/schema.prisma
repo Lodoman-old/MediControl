@@ -79,6 +79,7 @@ model Organization {
   notificationTemplates NotificationTemplate[]
   notificationLogs      NotificationLog[]
   deviceTokens          DeviceToken[]
+  webPushSubscriptions  WebPushSubscription[]
   cashRegisters         CashRegister[]
 
   @@map("organizations")
@@ -205,6 +206,7 @@ model User {
   cashRegistersClosed CashRegister[]       @relation("closedBy")
   cashMovements       CashMovement[]
   deviceTokens        DeviceToken[]
+  webPushSubscriptions WebPushSubscription[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -1301,6 +1303,26 @@ model DeviceToken {
   @@index([organizationId])
   @@index([userId])
   @@map("device_tokens")
+}
+
+model WebPushSubscription {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  endpoint       String   @unique @db.Text
+  p256dh         String   @db.Text
+  auth           String   @db.Text
+  userAgent      String?  @map("user_agent") @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@index([userId])
+  @@map("web_push_subscriptions")
 }
 
 model LabProvider {

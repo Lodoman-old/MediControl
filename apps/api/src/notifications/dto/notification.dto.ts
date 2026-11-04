@@ -6,8 +6,8 @@ export class CreateNotificationDto {
   @IsUUID()
   userId!: string;
 
-  @ApiProperty({ enum: ["IN_APP", "EMAIL", "WHATSAPP"] })
-  @IsEnum(["IN_APP", "EMAIL", "WHATSAPP"])
+  @ApiProperty({ enum: ["IN_APP", "EMAIL", "WHATSAPP", "PUSH"] })
+  @IsEnum(["IN_APP", "EMAIL", "WHATSAPP", "PUSH"])
   channel!: string;
 
   @ApiProperty({ example: "APPOINTMENT_REMINDER" })
@@ -42,8 +42,8 @@ export class CreateNotificationTemplateDto {
   @IsString()
   name!: string;
 
-  @ApiProperty({ enum: ["IN_APP", "EMAIL", "WHATSAPP"] })
-  @IsEnum(["IN_APP", "EMAIL", "WHATSAPP"])
+  @ApiProperty({ enum: ["IN_APP", "EMAIL", "WHATSAPP", "PUSH"] })
+  @IsEnum(["IN_APP", "EMAIL", "WHATSAPP", "PUSH"])
   channel!: string;
 
   @ApiProperty()

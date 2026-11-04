@@ -79,15 +79,73 @@ Si cambias de proyecto Firebase desde el panel, la APK toma la nueva configuraci
 la siguiente vez que se abra. Los tokens del proyecto anterior dejan de servir y se
 renuevan automaticamente.
 
-El push solo aplica a la APK Android. La version web del navegador no registra tokens push.
+El push solo aplica a la APK Android. La version web del navegador usa Web Push,
+que se configura aparte.
 
-### 4. Prueba
+### 5. Prueba
 
 1. Instalar la APK 1.0.7 o superior.
 2. Iniciar sesion y aceptar el permiso de notificaciones.
 3. Verificar que el token quede registrado.
 4. Crear una cita pendiente de confirmacion para un medico.
 5. El medico debe recibir la notificacion push.
+
+## Web Push para navegador y PWA
+
+Web Push no usa el proyecto Firebase del cliente. Usa un par de claves VAPID de
+MediControl.
+
+### 1. Generar claves
+
+**Configuracion → Integraciones → Web Push (PWA) → Generar claves VAPID**
+
+El sistema genera las claves, las guarda cifradas y activa la integracion. Si se
+regeneran las claves, las suscripciones anteriores se invalidan y los navegadores
+deben volver a suscribirse.
+
+Tambien se pueden configurar por variables de entorno:
+
+```env
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:soporte@medicontrol.com
+```
+
+### 2. Activar en el dispositivo
+
+Al iniciar sesion en la web aparece un aviso:
+
+**Activa las notificaciones**
+
+El usuario pulsa **Activar** y acepta el permiso del navegador. Es importante que
+sea un clic del usuario; los navegadores y especialmente iOS no permiten pedir el
+permiso automaticamente.
+
+### 3. iOS / PWA
+
+En iPhone o iPad:
+
+1. Abrir MediControl en Safari.
+2. Compartir → **Agregar a pantalla de inicio**.
+3. Abrir MediControl desde el icono instalado.
+4. Iniciar sesion.
+5. Pulsar **Activar** en el aviso de notificaciones.
+
+Requisitos:
+
+- iOS 16.4 o superior.
+- La PWA debe estar instalada en la pantalla de inicio.
+- HTTPS (Render ya lo proporciona).
+
+En Android y escritorio, Web Push puede funcionar directamente desde el navegador,
+sin instalar la PWA.
+
+### 4. Prueba
+
+1. Activar notificaciones en el navegador o PWA.
+2. Crear una cita pendiente de confirmacion para el usuario.
+3. Debe aparecer una notificacion del sistema.
+4. En la base de datos se guarda la suscripcion en `web_push_subscriptions`.
 
 ## Cuentas demo y panel de debug
 

@@ -25,6 +25,13 @@ export const INTEGRATION_PROVIDERS = {
     ],
     secrets: ["privateKey"],
   },
+  WEB_PUSH: {
+    label: "Web Push (PWA)",
+    description:
+      "Notificaciones para navegadores y PWA en Android, escritorio y iPhone/iPad instalado. Usa claves VAPID propias de MediControl.",
+    fields: ["publicKey", "privateKey", "subject"],
+    secrets: ["privateKey"],
+  },
   MERCADOPAGO: {
     label: "MercadoPago",
     description: "Cobros en linea (requiere habilitar la funcion).",

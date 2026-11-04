@@ -48,13 +48,15 @@ import DescargarAppPage from "@/pages/DescargarApp";
 import NotificationsPage from "@/pages/notifications/Notifications";
 import PublicBookingPage from "@/pages/public/PublicBooking";
 import ProtectedLayout from "@/components/ProtectedLayout";
+import WebPushPrompt from "@/components/WebPushPrompt";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function App() {
   usePushNotifications();
 
   return (
-    <Routes>
+    <>
+      <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -400,6 +402,8 @@ export default function App() {
         }
       />
       <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+      </Routes>
+      <WebPushPrompt />
+    </>
   );
 }

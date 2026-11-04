@@ -5,6 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
 import { WhatsappService } from "../whatsapp/whatsapp.service";
 import { PushService } from "./push/push.service";
+import { WebPushService } from "./web-push/web-push.service";
 import type { CreateNotificationDto, SendNotificationDto } from "./dto/notification.dto";
 
 @Injectable()
@@ -17,6 +18,7 @@ export class NotificationsService {
     private readonly mail: MailService,
     private readonly whatsapp: WhatsappService,
     private readonly push: PushService,
+    private readonly webPush: WebPushService,
     private readonly config: ConfigService,
   ) {}
 
@@ -401,6 +403,22 @@ export class NotificationsService {
     return this.push.getClientConfig(organizationId);
   }
 
+  getWebPushConfig(organizationId: string) {
+    return this.webPush.getPublicConfig(organizationId);
+  }
+
+  subscribeWebPush(
+    organizationId: string,
+    userId: string,
+    data: { endpoint: string; p256dh: string; auth: string; userAgent?: string },
+  ) {
+    return this.webPush.subscribe(organizationId, userId, data);
+  }
+
+  unsubscribeWebPush(userId: string, endpoint: string) {
+    return this.webPush.unsubscribe(userId, endpoint);
+  }
+
   async sendPushToUser(
     userId: string,
     title: string,
@@ -409,27 +427,88 @@ export class NotificationsService {
     organizationId?: string,
   ) {
     const tokens = await this.getUserDeviceTokens(userId);
-    if (tokens.length === 0) return { success: 0, failed: 0 };
-    return this.push.sendToMultipleDevices(tokens, { title, body, data }, organizationId);
+    const appointmentId = data?.appointmentId;
+    const url = appointmentId
+      ? `/#/appointments/${appointmentId}`
+      : data?.type === "APPOINTMENT_PENDING_CONFIRMATION"
+        ? "/#/appointments/pending"
+        : "/#/notifications";
+
+    const [nativeResult, webResult] = await Promise.all([
+      tokens.length > 0
+        ? this.push.sendToMultipleDevices(tokens, { title, body, data }, organizationId)
+        : Promise.resolve({ success: 0, failed: 0 }),
+      organizationId
+        ? this.webPush
+            .sendToUser(organizationId, userId, { title, body, url, data })
+            .catch((err) => {
+              this.logger.warn(`Web Push fallo: ${(err as Error).message}`);
+              return { success: 0, failed: 0 };
+            })
+        : Promise.resolve({ success: 0, failed: 0 }),
+    ]);
+
+    return {
+      success: nativeResult.success + webResult.success,
+      failed: nativeResult.failed + webResult.failed,
+    };
   }
 
   private async sendPush(organizationId: string, notificationId: string, dto: CreateNotificationDto) {
     const tokens = await this.getUserDeviceTokens(dto.userId);
-    if (tokens.length === 0) {
+    const url = dto.referenceType === "appointment" && dto.referenceId
+      ? `/#/appointments/${dto.referenceId}`
+      : "/#/notifications";
+
+    const [nativeResult, webResult] = await Promise.all([
+      tokens.length > 0
+        ? this.push.sendToMultipleDevices(
+            tokens,
+            {
+              title: dto.title,
+              body: dto.message,
+              data: {
+                type: dto.type,
+                referenceType: dto.referenceType ?? "",
+                referenceId: dto.referenceId ?? "",
+              },
+            },
+            organizationId,
+          )
+        : Promise.resolve({ success: 0, failed: 0 }),
+      this.webPush
+        .sendToUser(organizationId, dto.userId, {
+          title: dto.title,
+          body: dto.message,
+          url,
+          data: {
+            type: dto.type,
+            referenceType: dto.referenceType ?? "",
+            referenceId: dto.referenceId ?? "",
+          },
+        })
+        .catch((err) => {
+          this.logger.warn(`Web Push fallo: ${(err as Error).message}`);
+          return { success: 0, failed: 0 };
+        }),
+    ]);
+
+    const success = nativeResult.success + webResult.success;
+    const failed = nativeResult.failed + webResult.failed;
+    if (success + failed === 0) {
       await this.markSent(notificationId);
       return;
     }
-    const result = await this.push.sendToMultipleDevices(tokens, {
-      title: dto.title,
-      body: dto.message,
-      data: {
-        type: dto.type,
-        referenceType: dto.referenceType ?? "",
-        referenceId: dto.referenceId ?? "",
-      },
-    }, organizationId);
-    await this.logDelivery(organizationId, notificationId, "PUSH", `tokens:${tokens.length}`, dto.title, dto.message, result.failed === 0);
-    await this.updateStatus(notificationId, result.failed === 0 ? "SENT" : "FAILED");
+    await this.logDelivery(
+      organizationId,
+      notificationId,
+      "PUSH",
+      `fcm:${tokens.length},web:${webResult.success + webResult.failed}`,
+      dto.title,
+      dto.message,
+      failed === 0,
+    );
+    await this.updateStatus(notificationId, failed === 0 ? "SENT" : "FAILED");
   }
 
   private async sendEmail(organizationId: string, notificationId: string, dto: CreateNotificationDto) {

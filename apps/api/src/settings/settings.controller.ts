@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Put,
   UseGuards,
 } from "@nestjs/common";
@@ -40,6 +41,15 @@ export class SettingsController {
     @Body() dto: UpdateOrganizationSettingsDto,
   ) {
     return this.settings.updateSettings(user.organizationId, dto);
+  }
+
+  @ApiOperation({
+    summary: "Generar claves VAPID para Web Push",
+    description: "Genera y guarda un par de claves nuevo y activa Web Push. Invalida suscripciones previas.",
+  })
+  @Post("integrations/web-push/generate")
+  async generateWebPushKeys(@CurrentUser() user: AuthenticatedUser) {
+    return this.settings.generateWebPushKeys(user.organizationId, user.userId);
   }
 
   @ApiOperation({

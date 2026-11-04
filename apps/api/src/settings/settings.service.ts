@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import webpush from "web-push";
 import { PrismaService } from "../prisma/prisma.service";
 import { IntegrationsService } from "./integrations.service";
 import { isIntegrationProvider } from "./integration-providers";
@@ -103,6 +104,38 @@ export class SettingsService {
     };
   }
 
+  async generateWebPushKeys(organizationId: string, updatedBy?: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { email: true },
+    });
+    if (!organization) throw new NotFoundException("Organizacion no encontrada");
+
+    const keys = webpush.generateVAPIDKeys();
+    const subject = organization.email
+      ? `mailto:${organization.email}`
+      : "mailto:soporte@medicontrol.mx";
+
+    await this.integrations.saveConfig(
+      organizationId,
+      "WEB_PUSH",
+      true,
+      {
+        publicKey: keys.publicKey,
+        privateKey: keys.privateKey,
+        subject,
+      },
+      updatedBy,
+    );
+
+    await this.prisma.webPushSubscription.updateMany({
+      where: { organizationId },
+      data: { isActive: false },
+    });
+
+    return { publicKey: keys.publicKey, subject, isEnabled: true };
+  }
+
   async updateIntegration(
     organizationId: string,
     provider: string,
@@ -116,6 +149,12 @@ export class SettingsService {
     await this.integrations.saveConfig(organizationId, provider, isEnabled, config, updatedBy);
     if (provider === "FIREBASE") {
       await this.prisma.deviceToken.updateMany({
+        where: { organizationId },
+        data: { isActive: false },
+      });
+    }
+    if (provider === "WEB_PUSH") {
+      await this.prisma.webPushSubscription.updateMany({
         where: { organizationId },
         data: { isActive: false },
       });

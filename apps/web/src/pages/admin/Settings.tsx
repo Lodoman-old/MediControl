@@ -68,6 +68,7 @@ const FIELD_LABELS: Record<string, string> = {
   clientEmail: "Client email",
   privateKey: "Private key",
   publicKey: "Public key",
+  subject: "VAPID subject (mailto:...)",
   accessToken: "Access token",
 };
 
@@ -147,6 +148,7 @@ function IntegrationCard({
     return initial;
   });
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -165,6 +167,28 @@ function IntegrationCard({
     },
     onError: (e) => setError(extractErrorMessage(e)),
   });
+
+  const generateWebPushKeys = async () => {
+    setGenerating(true);
+    setError(null);
+    try {
+      const { data } = await api.post<{ publicKey: string; subject: string }>(
+        "/admin/settings/integrations/web-push/generate",
+      );
+      setValues((v) => ({
+        ...v,
+        publicKey: data.publicKey,
+        privateKey: "",
+        subject: data.subject,
+      }));
+      setIsEnabled(true);
+      onSaved("Claves VAPID generadas y Web Push activado");
+    } catch (e) {
+      setError(extractErrorMessage(e));
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const fieldKeys = useMemo(() => Object.keys(integration.config), [integration.config]);
 
@@ -213,6 +237,25 @@ function IntegrationCard({
             El <strong>Sender ID</strong> es el número de proyecto (Project number).
             La <strong>private key</strong> se genera en Cuentas de servicio.
           </p>
+        </div>
+      )}
+
+      {integration.provider === "WEB_PUSH" && (
+        <div className="p-3 bg-info-50 border border-info-200 rounded-lg text-xs text-info-700 space-y-2">
+          <p className="font-medium">Web Push para navegador y PWA</p>
+          <p>
+            Genera las claves VAPID automaticamente. Despues activa las notificaciones
+            desde el aviso que aparece en la web. En iPhone se requiere iOS 16.4 o
+            superior y tener la PWA instalada en la pantalla de inicio.
+          </p>
+          <button
+            type="button"
+            onClick={() => void generateWebPushKeys()}
+            disabled={generating}
+            className="btn-secondary text-xs"
+          >
+            {generating ? "Generando..." : "Generar claves VAPID"}
+          </button>
         </div>
       )}
 

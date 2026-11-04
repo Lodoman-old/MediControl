@@ -12,6 +12,7 @@ import {
   NotificationFilterDto,
 } from "./dto/notification.dto";
 import { RegisterDeviceDto, UnregisterDeviceDto } from "./dto/device-token.dto";
+import { WebPushSubscribeDto, WebPushUnsubscribeDto } from "./web-push/web-push.dto";
 
 @ApiTags("Notificaciones")
 @ApiBearerAuth()
@@ -59,6 +60,38 @@ export class NotificationsController {
   })
   async pushConfig(@CurrentUser() u: AuthenticatedUser) {
     return this.svc.getPushClientConfig(u.organizationId);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @Get("web-push-config")
+  @ApiOperation({ summary: "Configuracion publica de Web Push para la PWA" })
+  async webPushConfig(@CurrentUser() u: AuthenticatedUser) {
+    return this.svc.getWebPushConfig(u.organizationId);
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @Post("web-push/subscribe")
+  @ApiOperation({ summary: "Registrar suscripcion Web Push del navegador" })
+  async webPushSubscribe(
+    @CurrentUser() u: AuthenticatedUser,
+    @Body() dto: WebPushSubscribeDto,
+  ) {
+    return this.svc.subscribeWebPush(u.organizationId, u.userId, {
+      endpoint: dto.endpoint,
+      p256dh: dto.p256dh,
+      auth: dto.auth,
+      userAgent: dto.userAgent,
+    });
+  }
+
+  @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
+  @Post("web-push/unsubscribe")
+  @ApiOperation({ summary: "Desactivar suscripcion Web Push del navegador" })
+  async webPushUnsubscribe(
+    @CurrentUser() u: AuthenticatedUser,
+    @Body() dto: WebPushUnsubscribeDto,
+  ) {
+    return this.svc.unsubscribeWebPush(u.userId, dto.endpoint);
   }
 
   @Roles("SUPERADMIN", "ADMIN", "DOCTOR", "RECEPTION", "PATIENT")
