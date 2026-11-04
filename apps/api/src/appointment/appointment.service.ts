@@ -124,7 +124,10 @@ export class AppointmentService {
     const doctor = await findDoctor(this.prisma, organizationId, dto.doctorId);
 
     const patient = await this.prisma.patient.findFirst({
-      where: { id: dto.patientId, organizationId },
+      where: {
+        organizationId,
+        OR: [{ id: dto.patientId }, { userId: dto.patientId }],
+      },
     });
     if (!patient) throw new NotFoundException("Paciente no encontrado");
 
@@ -165,7 +168,7 @@ export class AppointmentService {
         branchId: dto.branchId,
         serviceLocationId: dto.serviceLocationId ?? null,
         doctorId: doctor.id,
-        patientId: dto.patientId,
+        patientId: patient.id,
         serviceId: dto.serviceId,
         startsAt,
         endsAt,

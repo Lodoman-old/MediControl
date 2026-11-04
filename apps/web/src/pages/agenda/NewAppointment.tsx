@@ -125,8 +125,8 @@ export default function NewAppointmentPage() {
     api.get("/admin/users?limit=100&role=DOCTOR").then((r) => {
       setDoctors(r.data.data ?? []);
     }).catch(() => setDoctors([]));
-    api.get("/admin/users?limit=100&role=PATIENT").then((r) => {
-      setPatients(r.data.data ?? []);
+    api.get("/patients?limit=100").then((r) => {
+      setPatients(r.data.data ?? r.data ?? []);
     }).catch(() => setPatients([]));
     api.get("/admin/branches").then(({ data }: any) => setBranches(data?.data ?? data ?? [])).catch(() => {});
     api.get("/services").then(({ data }: any) => setServices(data?.data ?? data ?? [])).catch(() => {});
