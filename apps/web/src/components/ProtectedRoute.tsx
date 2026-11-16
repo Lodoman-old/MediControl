@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 import { isTokenExpired } from "@/lib/jwt";
@@ -68,6 +68,8 @@ export default function ProtectedRoute({
     return <Navigate to="/change-password" replace />;
   }
 
+  const homePath = user?.roles.includes("PATIENT") ? "/portal" : "/dashboard";
+
   if (requiredRoles && requiredRoles.length > 0) {
     const has = requiredRoles.some((r) => user?.roles.includes(r));
     if (!has) {
@@ -78,6 +80,9 @@ export default function ProtectedRoute({
             <p className="text-ink-500 mt-2">
               Tu cuenta no tiene acceso a esta seccion.
             </p>
+            <Link to={homePath} replace className="btn-primary inline-block mt-4">
+              Ir al inicio
+            </Link>
           </div>
         </div>
       );
@@ -94,6 +99,9 @@ export default function ProtectedRoute({
             <p className="text-ink-500 mt-2">
               Te faltan permisos para acceder a esta seccion.
             </p>
+            <Link to={homePath} replace className="btn-primary inline-block mt-4">
+              Ir al inicio
+            </Link>
           </div>
         </div>
       );

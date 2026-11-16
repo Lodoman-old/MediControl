@@ -21,6 +21,12 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+function postLoginPath(roles: string[] | undefined, from?: string): string {
+  if (roles?.includes("PATIENT")) return "/portal";
+  if (!from || from === "/portal" || from.startsWith("/portal/")) return "/dashboard";
+  return from;
+}
+
 interface FromState {
   from?: { pathname?: string };
 }
@@ -73,7 +79,7 @@ export default function LoginPage() {
         navigate("/change-password", { replace: true });
       } else {
         const from = (location.state as FromState | null)?.from?.pathname;
-        navigate(user?.roles.includes("PATIENT") ? "/portal" : (from ?? "/dashboard"), { replace: true });
+        navigate(postLoginPath(user?.roles, from), { replace: true });
       }
     } else {
       setCheckingSession(false);
@@ -123,7 +129,7 @@ export default function LoginPage() {
         navigate("/change-password", { replace: true });
       } else {
         const from = (location.state as FromState | null)?.from?.pathname;
-        navigate(result.user?.roles.includes("PATIENT") ? "/portal" : (from ?? "/dashboard"), { replace: true });
+        navigate(postLoginPath(result.user?.roles, from), { replace: true });
       }
     } catch (err) {
       console.error(extractErrorMessage(err));
@@ -141,7 +147,7 @@ export default function LoginPage() {
       if (result.user?.mustChangePassword) {
         navigate("/change-password", { replace: true });
       } else {
-        navigate(result.user?.roles.includes("PATIENT") ? "/portal" : "/dashboard", { replace: true });
+        navigate(postLoginPath(result.user?.roles), { replace: true });
       }
     } catch (err) {
       setMfaError(extractErrorMessage(err));
