@@ -8,6 +8,7 @@ import { useLogin, useVerifyMfaLogin } from "@/hooks/useAuth";
 import { useAuthStore, selectIsAuthenticated } from "@/stores/authStore";
 import type { AuthUser } from "@/stores/authStore";
 import { extractErrorMessage } from "@/lib/api";
+import { api } from "@/lib/api";
 import { showDemoAccounts } from "@/lib/runtimeFlags";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
@@ -39,6 +40,21 @@ export default function LoginPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioChecking, setBioChecking] = useState(true);
+  const [slowLogin, setSlowLogin] = useState(false);
+
+  useEffect(() => {
+    if (!login.isPending) {
+      setSlowLogin(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSlowLogin(true), 5000);
+    return () => window.clearTimeout(timer);
+  }, [login.isPending]);
+
+  useEffect(() => {
+    // Despierta el API antes de que el usuario termine de capturar sus datos.
+    api.get("/health", { timeout: 90_000 }).catch(() => {});
+  }, []);
 
   const {
     register,
@@ -318,6 +334,12 @@ export default function LoginPage() {
               >
                 {login.isPending ? "Ingresando..." : "Ingresar"}
               </button>
+
+              {login.isPending && slowLogin && (
+                <div className="rounded-md border border-white/20 bg-white/10 px-3 py-2 text-xs text-white lg:border-info-200 lg:bg-info-50 lg:text-info-700">
+                  El servidor está iniciando. La primera conexión puede tardar hasta 90 segundos.
+                </div>
+              )}
             </form>
 
             {!bioChecking && bioAvailable && (

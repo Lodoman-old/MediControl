@@ -15,7 +15,9 @@ export interface LoginResponse {
 }
 
 async function loginRequest(input: LoginInput): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>("/auth/login", input);
+  const { data } = await api.post<LoginResponse>("/auth/login", input, {
+    timeout: 90_000,
+  });
   return data;
 }
 
